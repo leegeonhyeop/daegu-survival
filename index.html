@@ -9,7 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="config.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
 html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
 
@@ -98,7 +99,16 @@ button:disabled{opacity:.5;cursor:default}
 @media (max-width:560px){#nmap{height:400px}}
 .nmsg,.nzoom{position:absolute;left:50%;transform:translateX(-50%);z-index:3;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.15);white-space:nowrap;pointer-events:none}
 .nmsg{top:50%}.nzoom{bottom:12px}
-.nm-pop{position:static;width:240px}
+.nm-pop{position:relative;width:240px}
+#nmap{z-index:0;font-family:var(--f-body);background:var(--mapbg)}
+.nm-icon{background:none;border:0}
+.lp .leaflet-popup-content-wrapper{background:transparent;box-shadow:none;padding:0;border-radius:10px}
+.lp .leaflet-popup-content{margin:0;line-height:1.5;font-size:12.5px}
+.lp .leaflet-popup-tip-container{display:none}
+.nm-home{width:34px;height:34px;padding:0;border:2px solid rgba(0,0,0,.2);border-radius:4px;background:#fff;color:#333;display:flex;align-items:center;justify-content:center;background-clip:padding-box}
+.nm-home svg{width:16px;height:16px}
+.leaflet-container a.leaflet-popup-close-button{display:none}
+.leaflet-control-attribution{font-size:10px}
 .nm-num{width:22px;height:22px;border-radius:50%;background:var(--near);color:#fff;border:2px solid #fff;font:600 10px/18px var(--f-mono);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
 .nm-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);cursor:pointer}
 .nm-open{background:#4C82C2}.nm-closed{background:#A2A9B4}.nm-near{background:var(--near)}
@@ -592,15 +602,17 @@ function placePop(){
   $('zall').onclick=()=>{if(!V.ok)return;V.sc=Math.min(V.W,V.H)/62000;V.cx=342000;V.cy=274000;req();};
 })();
 
-/* ---------- Naver map ---------- */
-const NV={on:false,map:null,ov:[],dots:[],info:null,circle:null};
+/* ---------- street map (Leaflet + CARTO tiles) ---------- */
+const NV={on:false,map:null,ov:[],dots:null,info:null,circle:null,tiles:null,dark:null};
 const draw=()=>{if(NV.on)nRender();else req();};
-function nPos(d){return new naver.maps.LatLng(d.lat,d.lng);}
-function nClear(arr){arr.forEach(o=>o.setMap(null));arr.length=0;}
-function nMarker(d,html,ax,ay,z,arr){
-  const m=new naver.maps.Marker({map:NV.map,position:nPos(d),zIndex:z,icon:{content:html,anchor:new naver.maps.Point(ax,ay)}});
-  naver.maps.Event.addListener(m,'click',()=>nInfo(d));arr.push(m);return m;
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':!!(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);};
+function nTiles(){
+  const dk=isDark();if(NV.tiles&&NV.dark===dk)return;NV.dark=dk;
+  if(NV.tiles)NV.map.removeLayer(NV.tiles);
+  NV.tiles=L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/${dk?'dark_all':'voyager'}/{z}/{x}/{y}{r}.png`,
+    {subdomains:'abcd',maxZoom:20,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'}).addTo(NV.map);
 }
+const ll=d=>[d.lat,d.lng];
 function nInfo(d){
   const yr=years(d),R=LAST,rank=(R?.nb||[]).findIndex(n=>n.d.id===d.id);
   const el=document.createElement('div');el.className='pop nm-pop';
@@ -611,65 +623,67 @@ function nInfo(d){
     ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
     <div class="pop-a">${d.id!==selId?'<button class="primary" type="button" data-sel>이 가게로 비교</button>':''}
       <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
-  el.querySelector('.pop-x').onclick=()=>NV.info.close();
-  const b=el.querySelector('[data-sel]');if(b)b.onclick=()=>{NV.info.close();selId=d.id;runSearch();render();};
-  NV.info.setContent(el);NV.info.open(NV.map,nPos(d));
+  el.querySelector('.pop-x').onclick=()=>NV.map.closePopup();
+  const b=el.querySelector('[data-sel]');if(b)b.onclick=()=>{NV.map.closePopup();selId=d.id;runSearch();render();};
+  L.popup({className:'lp',closeButton:false,offset:[0,d.id===selId?-34:-8],autoPanPadding:[20,20],maxWidth:260}).setLatLng(ll(d)).setContent(el).openOn(NV.map);
+}
+function nMarker(d,html,size,anchor,z){
+  const m=L.marker(ll(d),{icon:L.divIcon({html,className:'nm-icon',iconSize:size,iconAnchor:anchor}),zIndexOffset:z,keyboard:false,title:d.name}).addTo(NV.map);
+  m.on('click',()=>nInfo(d));NV.ov.push(m);
 }
 function nRender(){
-  if(!NV.map)return;NV.info.close();nClear(NV.ov);nClear(NV.dots);if(NV.circle){NV.circle.setMap(null);NV.circle=null;}
-  const R=LAST;$('nmsg').hidden=true;
-  if(!R)return;
+  if(!NV.map)return;NV.map.closePopup();NV.ov.forEach(m=>m.remove());NV.ov=[];
+  if(NV.circle){NV.circle.remove();NV.circle=null;}
+  const R=LAST;$('nmsg').hidden=true;if(!R){nDots();return;}
   const s=R.sel;
-  if(s.lat==null){$('nmsg').textContent='이 가게는 위경도 정보가 없어 지도에 표시할 수 없습니다.';$('nmsg').hidden=false;return;}
-  if(R.radius){
-    NV.circle=new naver.maps.Circle({map:NV.map,center:nPos(s),radius:R.radius,strokeColor:cssv('--near'),strokeOpacity:.9,strokeWeight:2,strokeStyle:'shortdash',fillColor:cssv('--near'),fillOpacity:.08,clickable:false});
-  }
+  if(s.lat==null){$('nmsg').textContent='이 가게는 위경도 정보가 없어 지도에 표시할 수 없습니다.';$('nmsg').hidden=false;nDots();return;}
+  if(R.radius)NV.circle=L.circle(ll(s),{radius:R.radius,color:cssv('--near'),weight:2,dashArray:'6 5',fillColor:cssv('--near'),fillOpacity:.08,interactive:false}).addTo(NV.map);
   const numbered=(R.nb||[]).length<=60;
   (R.nb||[]).forEach((n,i)=>{if(n.d.lat==null)return;
-    nMarker(n.d,numbered?`<div class="nm-num">${i+1}</div>`:'<div class="nm-dot nm-near"></div>',numbered?11:5,numbered?11:5,200-i,NV.ov);});
+    if(numbered)nMarker(n.d,`<div class="nm-num">${i+1}</div>`,[22,22],[11,11],500-i);
+    else nMarker(n.d,'<div class="nm-dot nm-near"></div>',[10,10],[5,5],300);});
   const nm=s.name.length>14?s.name.slice(0,13)+'…':s.name;
-  nMarker(s,`<div class="nm-wrap"><div class="nm-sel"><span>${esc(nm)}</span><i></i></div></div>`,0,0,1000,NV.ov);
-  if(NV.circle)NV.map.fitBounds(NV.circle.getBounds());else{NV.map.setCenter(nPos(s));NV.map.setZoom(17);}
+  nMarker(s,`<div class="nm-wrap"><div class="nm-sel"><span>${esc(nm)}</span><i></i></div></div>`,[0,0],[0,0],1000);
+  if(NV.circle)NV.map.fitBounds(NV.circle.getBounds(),{padding:[28,28],maxZoom:18});else NV.map.setView(ll(s),17);
   nDots();
 }
 function nDots(){
-  if(!NV.map)return;nClear(NV.dots);
-  const z=NV.map.getZoom(),hint=$('nzoom');
-  if(z<16){hint.hidden=false;return;}hint.hidden=true;
-  const b=NV.map.getBounds(),sw=b.getSW(),ne=b.getNE(),R=LAST;
+  if(!NV.map)return;NV.dots.clearLayers();
+  const z=NV.map.getZoom();$('nzoom').hidden=z>=15;if(z<15)return;
+  const b=NV.map.getBounds().pad(.1),R=LAST;
   const skip=new Set([R?.sel?.id,...(R?.nb||[]).map(n=>n.d.id)]);
-  let c=0;
-  for(const d of DATA){
-    if(d.lat==null||skip.has(d.id))continue;
-    if(d.lat<sw.lat()||d.lat>ne.lat()||d.lng<sw.lng()||d.lng>ne.lng())continue;
-    nMarker(d,`<div class="nm-dot ${d.closed?'nm-closed':'nm-open'}"></div>`,5,5,d.closed?1:2,NV.dots);
-    if(++c>=400)break;
+  const cO=cssv('--open'),cC=cssv('--closed'),sf=cssv('--surface');let c=0;
+  for(const pass of [true,false])for(const d of DATA){
+    if(d.closed!==pass||d.lat==null||skip.has(d.id)||!b.contains([d.lat,d.lng]))continue;
+    L.circleMarker(ll(d),{renderer:NV.rend,radius:z>=17?5:4,color:sf,weight:1.2,fillColor:pass?cC:cO,fillOpacity:pass?.75:.95})
+      .on('click',()=>nInfo(d)).addTo(NV.dots);
+    if(++c>=3000)return;
   }
 }
 function nFail(msg){
   NV.on=false;$('nmap').hidden=true;$('cv').hidden=false;$('zoomCtl').hidden=false;
-  $('nstate').innerHTML=`<span class="chip closed">기본 지도</span> ${esc(msg)}`;req();
+  $('nstate').innerHTML=`<span class="chip closed">간단 지도</span> ${esc(msg)}`;req();
 }
 function nInit(){
-  const key=(window.NAVER_MAP_KEY_ID||'').trim();
-  if(!key){$('nstate').innerHTML='<span class="chip closed">기본 지도</span> config.js에 네이버 지도 Client ID를 넣으면 네이버 지도로 바뀝니다.';return;}
-  window.navermap_authFailure=()=>nFail('네이버 지도 인증에 실패했습니다. Client ID와 Web 서비스 URL 등록을 확인해 주세요.');
-  const sc=document.createElement('script');
-  sc.src='https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId='+encodeURIComponent(key);
-  sc.onerror=()=>nFail('네이버 지도 스크립트를 불러오지 못했습니다.');
-  sc.onload=()=>{
-    if(!window.naver?.maps){nFail('네이버 지도를 시작하지 못했습니다.');return;}
-    $('cv').hidden=true;$('zoomCtl').hidden=true;$('pop').hidden=true;$('nmap').hidden=false;
-    NV.map=new naver.maps.Map('nmap',{center:new naver.maps.LatLng(35.8714,128.6014),zoom:13,
-      zoomControl:true,zoomControlOptions:{position:naver.maps.Position.TOP_RIGHT},mapTypeControl:true,scaleControl:true,logoControl:true,mapDataControl:false});
-    NV.info=new naver.maps.InfoWindow({content:'',borderWidth:0,backgroundColor:'transparent',disableAnchor:true,pixelOffset:new naver.maps.Point(0,-16)});
-    naver.maps.Event.addListener(NV.map,'click',()=>NV.info.close());
-    let t;naver.maps.Event.addListener(NV.map,'idle',()=>{clearTimeout(t);t=setTimeout(nDots,120);});
-    NV.on=true;$('nstate').innerHTML='<span class="chip">네이버 지도</span>';
-    $('mapHint').textContent='점을 누르면 가게 정보가 나옵니다. 더 가까이 확대하면(16단계 이상) 주변의 다른 가게도 회색·파란 점으로 보입니다.';
-    if(LAST)nRender();
-  };
-  document.head.appendChild(sc);
+  if(!window.L){nFail('지도 라이브러리를 불러오지 못해 간단 지도로 표시합니다.');return;}
+  $('cv').hidden=true;$('zoomCtl').hidden=true;$('pop').hidden=true;$('nmap').hidden=false;
+  NV.map=L.map('nmap',{zoomControl:false,preferCanvas:false}).setView([35.8714,128.6014],13);
+  L.control.zoom({position:'topright',zoomInTitle:'확대',zoomOutTitle:'축소'}).addTo(NV.map);
+  L.control.scale({imperial:false,position:'bottomleft'}).addTo(NV.map);
+  const Home=L.Control.extend({onAdd(){const b=L.DomUtil.create('button','nm-home');b.type='button';b.title='선택한 가게로 이동';b.setAttribute('aria-label','선택한 가게로 이동');
+    b.innerHTML='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg>';
+    L.DomEvent.disableClickPropagation(b);b.onclick=()=>nRender();return b;}});
+  new Home({position:'topright'}).addTo(NV.map);
+  NV.rend=L.canvas({padding:.3});NV.dots=L.layerGroup().addTo(NV.map);
+  nTiles();
+  let t;NV.map.on('moveend',()=>{clearTimeout(t);t=setTimeout(nDots,80);});
+  NV.on=true;$('nstate').textContent='';
+  $('mapHint').textContent='드래그로 이동하고 휠·두 손가락으로 확대합니다. 더 확대하면 주변 가게가 모두 점으로 나오고, 점을 누르면 가게 정보가 나옵니다.';
+  const re=()=>{nTiles();nRender();};
+  if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',re);
+  new MutationObserver(re).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  window.addEventListener('resize',()=>NV.map.invalidateSize());
+  if(LAST)nRender();
 }
 
 /* ---------- search ---------- */
