@@ -142,6 +142,8 @@ a{color:var(--accent)}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .lg-tg{display:inline-flex;align-items:center;gap:0;cursor:pointer;color:var(--ink);font-size:12px}
 .lg-tg input{margin:0 6px 0 0;accent-color:var(--accent)}
+.legend i.lg-fr{width:10px;height:10px;border-radius:1px;background:#7C3AED;border:1.5px solid #fff;box-shadow:0 0 0 1px #7C3AED;transform:rotate(45deg);margin-right:7px;margin-left:2px}
+.chip.fr{background:#EDE4FD;color:#6D28D9}
 .legend i.lg-open{width:11px;height:11px;background:#16A34A;border:2px solid #fff;box-shadow:0 0 0 1px #16A34A}
 .legend i.lg-closed{width:11px;height:11px;background:transparent;border:2px solid #E11D48;position:relative}
 .legend i.lg-closed::after{content:"";position:absolute;left:50%;top:50%;width:9px;height:2px;background:#E11D48;transform:translate(-50%,-50%) rotate(-45deg)}
@@ -249,6 +251,7 @@ tr:hover td{background:var(--accent-soft)}
           <span><i style="background:var(--near)"></i>비교 대상 폐업 점포 k곳 (번호 = 가까운 순)</span>
           <label class="lg-tg"><input type="checkbox" id="showOpen" checked><i class="lg-open"></i>영업 중인 가게</label>
           <label class="lg-tg"><input type="checkbox" id="showClosed" checked><i class="lg-closed"></i>폐업한 가게</label>
+          <label class="lg-tg"><input type="checkbox" id="showFr" checked><i class="lg-fr"></i>프랜차이즈 (빈 마름모 = 폐업)</label>
         </div>
         <p class="hint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
       </section>
@@ -373,7 +376,7 @@ async function onFiles(files){
 function finishLoad(rows,label){
   $('progWrap').hidden=true;$('mapPanel').hidden=true;
   if(!rows.length){showErr('대구광역시 주소인 행이 없습니다. 주소 열 지정이 맞는지 확인해 주세요.');return;}
-  DATA=rows;buildLabels();SRC={label,bundled:false};REF=Date.now();{const d=new Date(REF);REFLABEL=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;}
+  DATA=rows;buildLabels();detectFranchise();SRC={label,bundled:false};REF=Date.now();{const d=new Date(REF);REFLABEL=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;}
   const withXY=rows.filter(r=>r.x!=null).length;
   selId=pickDefault();renderSrc(withXY);runSearch();render();
 }
@@ -417,6 +420,21 @@ const MENUS=[
  ['백반·한정식',/백반|한정식|기사식당|밥상|가정식|쌈밥|비빔밥|보리밥|정식/],
 ];
 function menuOf(name){const n=String(name||'');for(const [m,re] of MENUS)if(re.test(n))return m;return null;}
+/* ---------- 프랜차이즈 추정 (상호명) ---------- */
+const KNOWN_FR=['스타벅스','이디야','투썸플레이스','메가커피','메가엠지씨커피','컴포즈커피','빽다방','롯데리아','맥도날드','버거킹','kfc','서브웨이','도미노피자','피자헛','파파존스','김밥천국','홍콩반점','새마을식당','한신포차','역전우동','명랑핫도그','엽기떡볶이','동대문엽기떡볶이','본죽','이삭토스트','봉구스밥버거'];
+function detectFranchise(){
+  const clean=n=>String(n||'').replace(/\(.*?\)|\[.*?\]/g,'').trim();
+  const cnt=new Map();
+  for(const d of DATA){const p=clean(d.name).split(/\s+/);
+    if(p.length>=2&&/점$/.test(p[p.length-1])&&p[p.length-1].length>=2){const b=p.slice(0,-1).join('').toLowerCase();if(b.length>=2)cnt.set(b,(cnt.get(b)||0)+1);}}
+  const B=new Set(KNOWN_FR);for(const [b,c] of cnt)if(c>=4)B.add(b);
+  for(const d of DATA){
+    const c=clean(d.name),p=c.split(/\s+/),norm=c.replace(/\s+/g,'').toLowerCase();let hit=null;
+    if(p.length>=2&&B.has(p.slice(0,-1).join('').toLowerCase()))hit=p.slice(0,-1).join('');
+    else for(let L=Math.min(norm.length,16);L>=3;L--){if(B.has(norm.slice(0,L))&&(norm.length===L||/점$/.test(norm))){hit=c.replace(/\s+/g,'').slice(0,L);break;}}
+    d.fr=hit;
+  }
+}
 /* ---------- bundled Daegu data ---------- */
 async function loadBundled(){
   $('result').innerHTML='<div class="empty">대구 일반음식점 97,575곳을 불러오는 중입니다…</div>';
@@ -430,7 +448,7 @@ async function loadBundled(){
         x:j.x[i]||null,y:j.y[i]||null,warn:!!j.w[i]};
       out[i].menu=menuOf(out[i].name);out[i].key=(out[i].name+' '+out[i].addr+' '+(out[i].dong||'')+' '+out[i].type+' '+(out[i].menu||'')).toLowerCase();
     }
-    DATA=out;buildLabels();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
+    DATA=out;buildLabels();detectFranchise();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
     selId=pickDefault();renderSrc(out.filter(d=>d.x!=null).length);startReady();runSearch();render();
   }catch(e){
     $('result').innerHTML='<p class="err">기본 데이터를 불러오지 못했습니다. 페이지를 새로고침하거나 CSV·JSON 파일을 직접 올려 주세요.</p>';
@@ -484,7 +502,7 @@ function render(){
   const box=$('result'),tbl=$('tbl');
   if(!R){box.innerHTML='<div class="empty">왼쪽에서 가게를 골라 주세요.</div>';tbl.innerHTML='';draw();return;}
   const s=R.sel;
-  const head=`<div><p class="store-name">${esc(s.name)}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} · <a href="${naverUrl(s)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></p></div>`;
+  const head=`<div><p class="store-name">${esc(s.name)}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} · <a href="${naverUrl(s)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></p></div>`;
   if(R.err){box.innerHTML=`<h2>생존 점수</h2>${head}<p class="err">${esc(R.err)}</p>`;tbl.innerHTML='';draw();return;}
   const [vt,vc]=verdict(R.ratio);const mx=Math.max(R.own,R.avg)*1.05||1;
   box.innerHTML=`<h2>생존 점수</h2>
@@ -599,15 +617,20 @@ function paint(){
   const dot=V.sc>.6?3.2:V.sc>.15?2.4:1.6;
   // dots: closed first, open on top
   // 영업 중 = 초록 꽉 찬 원, 폐업 = 빨간 빈 원에 사선
-  const showO=$('showOpen').checked,showC=$('showClosed').checked;
+  const showO=$('showOpen').checked,showC=$('showClosed').checked,showF=$('showFr').checked;
   if(!TILE.ok||V.sc>=.12){
     const big=V.sc>=.12,rd=big?(V.sc>=.5?5:V.sc>=.25?4:3):1.3;
     for(const pass of [1,0]){
       if(pass?!showC:!showO)continue;
       for(const d of DATA){
         if(d.x==null||d.closed!==!!pass||near.has(d.id)||d.id===s.id)continue;
+        if(d.fr&&!showF)continue;
         if(Math.abs(d.x-V.cx)>hx||Math.abs(d.y-V.cy)>hy)continue;
         const x=sx(d.x),y=sy(d.y);
+        if(d.fr){if(!big){c.fillStyle=pass?'rgba(124,58,237,.45)':'rgba(124,58,237,.9)';c.fillRect(x-rd,y-rd,rd*2,rd*2);continue;}
+          const q=rd+2.4;c.beginPath();c.moveTo(x,y-q);c.lineTo(x+q,y);c.lineTo(x,y+q);c.lineTo(x-q,y);c.closePath();
+          if(pass){c.strokeStyle='#fff';c.lineWidth=3.2;c.stroke();c.strokeStyle='#7C3AED';c.lineWidth=1.6;c.stroke();}
+          else{c.fillStyle='#7C3AED';c.fill();c.strokeStyle='#fff';c.lineWidth=1.5;c.stroke();}continue;}
         if(!big){c.fillStyle=pass?'rgba(225,29,72,.45)':'rgba(22,163,74,.8)';c.fillRect(x-rd,y-rd,rd*2,rd*2);continue;}
         if(pass){c.globalAlpha=.85;c.strokeStyle='#fff';c.lineWidth=3.2;c.beginPath();c.arc(x,y,rd,0,7);c.stroke();
           c.strokeStyle='#E11D48';c.lineWidth=1.6;c.beginPath();c.arc(x,y,rd,0,7);c.stroke();
@@ -679,7 +702,7 @@ function showPop(d){
   POP=d;const p=$('pop');if(!d){p.hidden=true;req();return;}
   const yr=years(d),R=LAST,rank=(R?.nb||[]).findIndex(n=>n.d.id===d.id);
   p.innerHTML=`<button class="pop-x" type="button" aria-label="닫기">×</button>
-    <b>${esc(d.name)}</b>
+    <b>${esc(d.name)}</b>${d.fr?` <span class="chip fr">프랜차이즈 · ${esc(d.fr)}</span>`:''}
     <div class="pop-m">${esc(d.type)} · ${esc(d.gu||'')} ${esc(d.dong||'')}</div>
     <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
     ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
@@ -800,7 +823,7 @@ function runSearch(){
   const sel=DATA.find(d=>d.id===selId);
   if(sel&&!rows.includes(sel)&&!q)rows=[sel,...rows.slice(0,59)];
   list.innerHTML=rows.map(d=>`<div class="item${d.id===selId?' sel':''}" role="option" tabindex="0" data-id="${d.id}" aria-selected="${d.id===selId}">
-    <div style="min-width:0"><b>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')}${d.closed?' · 폐업':''}</small></div>
+    <div style="min-width:0"><b>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')}${d.fr?' · 프랜차이즈':''}${d.closed?' · 폐업':''}</small></div>
     <div class="r">${fy(years(d))}</div></div>`).join('')||'<div class="empty" style="padding:20px">검색 결과가 없습니다.</div>';
   $('listHint').textContent=total>60?`${total.toLocaleString()}곳 중 60곳만 보여줍니다. 검색어를 더 좁혀 보세요.`:`${total.toLocaleString()}곳`;
 }
@@ -810,7 +833,7 @@ let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(runSe
 
 /* ---------- controls ---------- */
 $('k').addEventListener('input',()=>{$('kNum').textContent=$('k').value;render();});
-$('cmpMode').addEventListener('change',render);$('showOpen').addEventListener('change',()=>req());document.querySelectorAll('#mapType button').forEach(b=>b.addEventListener('click',()=>setMapType(b.dataset.t)));$('showClosed').addEventListener('change',()=>req());$('sameGu').addEventListener('change',render);
+$('cmpMode').addEventListener('change',render);$('showOpen').addEventListener('change',()=>req());$('showFr').addEventListener('change',()=>req());document.querySelectorAll('#mapType button').forEach(b=>b.addEventListener('click',()=>setMapType(b.dataset.t)));$('showClosed').addEventListener('change',()=>req());$('sameGu').addEventListener('change',render);
 $('pickBtn').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change',e=>{onFiles(e.target.files);e.target.value='';});
 const drop=$('drop');
