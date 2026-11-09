@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="config.js"></script>
 <style>
 html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
 
@@ -93,6 +94,18 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+#nmap{width:100%;height:460px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+@media (max-width:560px){#nmap{height:400px}}
+.nmsg,.nzoom{position:absolute;left:50%;transform:translateX(-50%);z-index:3;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.15);white-space:nowrap;pointer-events:none}
+.nmsg{top:50%}.nzoom{bottom:12px}
+.nm-pop{position:static;width:240px}
+.nm-num{width:22px;height:22px;border-radius:50%;background:var(--near);color:#fff;border:2px solid #fff;font:600 10px/18px var(--f-mono);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
+.nm-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);cursor:pointer}
+.nm-open{background:#4C82C2}.nm-closed{background:#A2A9B4}.nm-near{background:var(--near)}
+.nm-wrap{position:relative;width:0;height:0}
+.nm-sel{position:absolute;bottom:0;left:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.nm-sel span{background:#1F62A8;color:#fff;font:700 12.5px/1 var(--f-body);padding:6px 10px;border-radius:99px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.nm-sel i{width:0;height:0;border:7px solid transparent;border-top:9px solid #1F62A8;border-bottom:0}
 canvas{width:100%;height:460px;display:block;border-radius:8px;background:var(--mapbg);cursor:grab;touch-action:none;border:1px solid var(--line)}
 canvas.drag{cursor:grabbing}
 @media (max-width:560px){canvas{height:400px}}
@@ -176,8 +189,8 @@ tr:hover td{background:var(--accent-soft)}
       <section class="panel" id="result" aria-live="polite"></section>
       <section class="panel" aria-labelledby="h-map">
         <h2 id="h-map">위치</h2>
-        <div class="mapbox"><canvas id="cv" aria-label="선택 가게와 주변 폐업 점포 지도. 드래그로 이동, 휠로 확대"></canvas>
-          <div class="zoom">
+        <div class="mapbox"><div id="nmap" hidden></div><div class="nmsg" id="nmsg" hidden></div><div class="nzoom" id="nzoom" hidden>더 확대하면 주변 가게가 모두 보입니다</div><canvas id="cv" aria-label="선택 가게와 주변 폐업 점포 지도. 드래그로 이동, 휠로 확대"></canvas>
+          <div class="zoom" id="zoomCtl">
             <button type="button" id="zin" aria-label="확대">+</button>
             <button type="button" id="zout" aria-label="축소">−</button>
             <button type="button" id="zfit" aria-label="선택한 가게로 이동"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg></button>
@@ -190,7 +203,8 @@ tr:hover td{background:var(--accent-soft)}
           <span><i style="background:var(--open)"></i>그 밖의 영업 점포</span>
           <span><i style="background:var(--closed)"></i>그 밖의 폐업 점포</span>
         </div>
-        <p class="hint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
+        <p class="hint" id="nstate"></p>
+        <p class="hint" id="mapHint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
       </section>
       <section class="panel" aria-labelledby="h-tbl">
         <h2 id="h-tbl">비교 대상 폐업 점포</h2>
@@ -217,6 +231,8 @@ const FIELDS=[
  {key:'type',label:'업태구분명',req:true,al:['업태구분명','uptaenm','bzstat_se_nm','bzstatsenm','업태']},
  {key:'x',label:'좌표 X',req:true,al:['좌표정보x(epsg5174)','좌표정보(x)','좌표정보x','crd_info_x','crdinfox','x']},
  {key:'y',label:'좌표 Y',req:true,al:['좌표정보y(epsg5174)','좌표정보(y)','좌표정보y','crd_info_y','crdinfoy','y']},
+ {key:'lat',label:'위도',req:false,al:['위도','lat','latitude']},
+ {key:'lng',label:'경도',req:false,al:['경도','lng','lon','longitude']},
  {key:'road',label:'도로명주소',req:false,al:['도로명전체주소','rdnwhladdr','road_nm_addr','roadnmaddr','도로명주소']},
  {key:'lot',label:'지번주소',req:false,al:['소재지전체주소','sitewhladdr','lotno_addr','lotnoaddr','지번주소','소재지주소']},
 ];
@@ -271,7 +287,7 @@ function convert(r,m){
   const x=parseFloat(r[m.x]),y=parseFloat(r[m.y]);
   return {id:++seq,name:String(r[m.name]||'(이름 없음)').trim(),type:String(r[m.type]||'').trim()||'미분류',
     gu:guOf(road)||guOf(lot),addr,closed,start,end:closed?end:null,
-    x:isFinite(x)&&x>0?x:null,y:isFinite(y)&&y>0?y:null,warn:false,get key(){return (this.name+' '+this.addr+' '+this.type).toLowerCase()}};
+    x:isFinite(x)&&x>0?x:null,y:isFinite(y)&&y>0?y:null,lat:m.lat&&+r[m.lat]>30?+r[m.lat]:null,lng:m.lng&&+r[m.lng]>120?+r[m.lng]:null,warn:false,get key(){return (this.name+' '+this.addr+' '+this.type).toLowerCase()}};
 }
 const years=s=>((s.closed?(s.end||NaN):REF)-s.start)/YEAR;
 
@@ -349,7 +365,7 @@ async function loadBundled(){
       const gu=j.gus[j.g[i]],closed=j.e[i]>=0;
       out[i]={id:i+1,name:j.n[i]||'(이름 없음)',type:j.types[j.t[i]],gu,dong:j.dongs[j.d[i]],
         addr:'대구광역시 '+gu+' '+j.a[i],closed,start:j.s[i]*DAY,end:closed?j.e[i]*DAY:null,
-        x:j.x[i]||null,y:j.y[i]||null,warn:!!j.w[i]};
+        x:j.x[i]||null,y:j.y[i]||null,lat:j.la&&j.la[i]?35+j.la[i]/1e6:null,lng:j.lo&&j.lo[i]?128+j.lo[i]/1e6:null,warn:!!j.w[i]};
       out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
     }
     DATA=out;buildLabels();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
@@ -453,7 +469,6 @@ function fitView(){
   V.cx=R.sel.x;V.cy=R.sel.y;V.sc=Math.min(V.W,V.H)/(2*rad);V.ok=true;
 }
 function req(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();});}
-const draw=req;
 const sx=x=>V.W/2+(x-V.cx)*V.sc, sy=y=>V.H/2-(y-V.cy)*V.sc;
 function paint(){
   const cv=$('cv'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
@@ -577,6 +592,86 @@ function placePop(){
   $('zall').onclick=()=>{if(!V.ok)return;V.sc=Math.min(V.W,V.H)/62000;V.cx=342000;V.cy=274000;req();};
 })();
 
+/* ---------- Naver map ---------- */
+const NV={on:false,map:null,ov:[],dots:[],info:null,circle:null};
+const draw=()=>{if(NV.on)nRender();else req();};
+function nPos(d){return new naver.maps.LatLng(d.lat,d.lng);}
+function nClear(arr){arr.forEach(o=>o.setMap(null));arr.length=0;}
+function nMarker(d,html,ax,ay,z,arr){
+  const m=new naver.maps.Marker({map:NV.map,position:nPos(d),zIndex:z,icon:{content:html,anchor:new naver.maps.Point(ax,ay)}});
+  naver.maps.Event.addListener(m,'click',()=>nInfo(d));arr.push(m);return m;
+}
+function nInfo(d){
+  const yr=years(d),R=LAST,rank=(R?.nb||[]).findIndex(n=>n.d.id===d.id);
+  const el=document.createElement('div');el.className='pop nm-pop';
+  el.innerHTML=`<button class="pop-x" type="button" aria-label="닫기">×</button>
+    <b>${esc(d.name)}</b>
+    <div class="pop-m">${esc(d.type)} · ${esc(d.gu||'')} ${esc(d.dong||'')}</div>
+    <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
+    ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
+    <div class="pop-a">${d.id!==selId?'<button class="primary" type="button" data-sel>이 가게로 비교</button>':''}
+      <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
+  el.querySelector('.pop-x').onclick=()=>NV.info.close();
+  const b=el.querySelector('[data-sel]');if(b)b.onclick=()=>{NV.info.close();selId=d.id;runSearch();render();};
+  NV.info.setContent(el);NV.info.open(NV.map,nPos(d));
+}
+function nRender(){
+  if(!NV.map)return;NV.info.close();nClear(NV.ov);nClear(NV.dots);if(NV.circle){NV.circle.setMap(null);NV.circle=null;}
+  const R=LAST;$('nmsg').hidden=true;
+  if(!R)return;
+  const s=R.sel;
+  if(s.lat==null){$('nmsg').textContent='이 가게는 위경도 정보가 없어 지도에 표시할 수 없습니다.';$('nmsg').hidden=false;return;}
+  if(R.radius){
+    NV.circle=new naver.maps.Circle({map:NV.map,center:nPos(s),radius:R.radius,strokeColor:cssv('--near'),strokeOpacity:.9,strokeWeight:2,strokeStyle:'shortdash',fillColor:cssv('--near'),fillOpacity:.08,clickable:false});
+  }
+  const numbered=(R.nb||[]).length<=60;
+  (R.nb||[]).forEach((n,i)=>{if(n.d.lat==null)return;
+    nMarker(n.d,numbered?`<div class="nm-num">${i+1}</div>`:'<div class="nm-dot nm-near"></div>',numbered?11:5,numbered?11:5,200-i,NV.ov);});
+  const nm=s.name.length>14?s.name.slice(0,13)+'…':s.name;
+  nMarker(s,`<div class="nm-wrap"><div class="nm-sel"><span>${esc(nm)}</span><i></i></div></div>`,0,0,1000,NV.ov);
+  if(NV.circle)NV.map.fitBounds(NV.circle.getBounds());else{NV.map.setCenter(nPos(s));NV.map.setZoom(17);}
+  nDots();
+}
+function nDots(){
+  if(!NV.map)return;nClear(NV.dots);
+  const z=NV.map.getZoom(),hint=$('nzoom');
+  if(z<16){hint.hidden=false;return;}hint.hidden=true;
+  const b=NV.map.getBounds(),sw=b.getSW(),ne=b.getNE(),R=LAST;
+  const skip=new Set([R?.sel?.id,...(R?.nb||[]).map(n=>n.d.id)]);
+  let c=0;
+  for(const d of DATA){
+    if(d.lat==null||skip.has(d.id))continue;
+    if(d.lat<sw.lat()||d.lat>ne.lat()||d.lng<sw.lng()||d.lng>ne.lng())continue;
+    nMarker(d,`<div class="nm-dot ${d.closed?'nm-closed':'nm-open'}"></div>`,5,5,d.closed?1:2,NV.dots);
+    if(++c>=400)break;
+  }
+}
+function nFail(msg){
+  NV.on=false;$('nmap').hidden=true;$('cv').hidden=false;$('zoomCtl').hidden=false;
+  $('nstate').innerHTML=`<span class="chip closed">기본 지도</span> ${esc(msg)}`;req();
+}
+function nInit(){
+  const key=(window.NAVER_MAP_KEY_ID||'').trim();
+  if(!key){$('nstate').innerHTML='<span class="chip closed">기본 지도</span> config.js에 네이버 지도 Client ID를 넣으면 네이버 지도로 바뀝니다.';return;}
+  window.navermap_authFailure=()=>nFail('네이버 지도 인증에 실패했습니다. Client ID와 Web 서비스 URL 등록을 확인해 주세요.');
+  const sc=document.createElement('script');
+  sc.src='https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId='+encodeURIComponent(key);
+  sc.onerror=()=>nFail('네이버 지도 스크립트를 불러오지 못했습니다.');
+  sc.onload=()=>{
+    if(!window.naver?.maps){nFail('네이버 지도를 시작하지 못했습니다.');return;}
+    $('cv').hidden=true;$('zoomCtl').hidden=true;$('pop').hidden=true;$('nmap').hidden=false;
+    NV.map=new naver.maps.Map('nmap',{center:new naver.maps.LatLng(35.8714,128.6014),zoom:13,
+      zoomControl:true,zoomControlOptions:{position:naver.maps.Position.TOP_RIGHT},mapTypeControl:true,scaleControl:true,logoControl:true,mapDataControl:false});
+    NV.info=new naver.maps.InfoWindow({content:'',borderWidth:0,backgroundColor:'transparent',disableAnchor:true,pixelOffset:new naver.maps.Point(0,-16)});
+    naver.maps.Event.addListener(NV.map,'click',()=>NV.info.close());
+    let t;naver.maps.Event.addListener(NV.map,'idle',()=>{clearTimeout(t);t=setTimeout(nDots,120);});
+    NV.on=true;$('nstate').innerHTML='<span class="chip">네이버 지도</span>';
+    $('mapHint').textContent='점을 누르면 가게 정보가 나옵니다. 더 가까이 확대하면(16단계 이상) 주변의 다른 가게도 회색·파란 점으로 보입니다.';
+    if(LAST)nRender();
+  };
+  document.head.appendChild(sc);
+}
+
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
@@ -612,11 +707,11 @@ function renderSrc(withXY){
     ?`<span class="chip">기본 데이터</span><span>${esc(SRC.label)} · 2026.10.28 수집 · 대구 ${DATA.length.toLocaleString()}곳 (영업 ${DATA.filter(d=>!d.closed).length.toLocaleString()} · 폐업 ${DATA.filter(d=>d.closed).length.toLocaleString()})</span>`
     :`<span class="chip">불러옴</span><span>${esc(SRC.label)} · 대구 ${DATA.length.toLocaleString()}곳 (좌표 있음 ${withXY.toLocaleString()})</span>`;
 }
-window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(draw,100);});
-if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',draw);
-new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(()=>{if(!NV.on)req();},100);});
+if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(!NV.on)req();});
+new MutationObserver(()=>{if(!NV.on)req();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
-loadBundled();
+loadBundled();nInit();
 })();
 </script>
 
