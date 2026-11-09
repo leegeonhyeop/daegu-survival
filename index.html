@@ -166,7 +166,12 @@ tr:hover td{background:var(--accent-soft)}
         <label for="k">주변 폐업 점포 수 k</label>
         <div class="krow"><input type="range" id="k" min="3" max="100" value="20"><span class="knum" id="kNum">20</span></div>
         <div class="checks">
-          <label><input type="checkbox" id="sameType" checked> 같은 업태만 비교</label>
+          <label for="cmpMode" style="color:var(--muted)">무엇과 비교할까요?</label>
+          <select id="cmpMode">
+            <option value="menu" selected>같은 메뉴 (상호명으로 추정)</option>
+            <option value="type">같은 업태 (행정 분류)</option>
+            <option value="all">모든 음식점</option>
+          </select>
           <label><input type="checkbox" id="sameGu"> 같은 구·군 안에서만 찾기</label>
         </div>
       </section>
@@ -322,7 +327,7 @@ function load(){
   if(miss.length){showErr('다음 열을 지정해 주세요: '+miss.join(', '));return;}
   hideErr();seq=0;const out=[];
   if(pending.kind==='json'){
-    pending.rows.forEach(r=>{const c=convert(r,m);if(c)out.push(c);});
+    pending.rows.forEach(r=>{const c=convert(r,m);if(c){c.menu=menuOf(c.name);out.push(c);}});
     finishLoad(out,pending.files.map(f=>f.name).join(', '));return;
   }
   const files=pending.files,enc=pending.enc;let i=0;
@@ -331,7 +336,7 @@ function load(){
     if(i>=files.length){$('loadBtn').disabled=false;finishLoad(out,files.map(f=>f.name).join(', '));return;}
     const f=files[i++];let scanned=0;
     Papa.parse(f,{header:true,skipEmptyLines:true,encoding:enc,transformHeader:h=>h.replace(/^﻿/,'').trim(),
-      chunk:res=>{for(const r of res.data){scanned++;const c=convert(r,m);if(c)out.push(c);}
+      chunk:res=>{for(const r of res.data){scanned++;const c=convert(r,m);if(c){c.menu=menuOf(c.name);out.push(c);}}
         const p=Math.min(100,(res.meta.cursor/f.size)*100);$('prog').style.width=p+'%';
         $('progTxt').textContent=`${f.name} · ${scanned.toLocaleString()}행 확인 · 대구 ${out.length.toLocaleString()}곳`;},
       complete:next,error:e=>{$('loadBtn').disabled=false;showErr('읽는 중 오류: '+e.message);}});
@@ -339,6 +344,24 @@ function load(){
   next();
 }
 
+/* ---------- 메뉴 추정 (상호명 키워드) ---------- */
+const MENUS=[
+ ['국밥·해장국',/국밥|해장국|순대국|순댓국|선지|수구레|내장탕|곰탕|설렁탕|갈비탕|육개장|추어탕|감자탕|뼈다귀|뼈해장|따로국/],
+ ['족발·보쌈',/족발|보쌈/],
+ ['치킨·통닭',/치킨|통닭|닭강정|chicken/i],
+ ['찜·찌개·전골',/찜닭|찌개|전골|부대|김치찜|닭갈비|닭한마리|닭볶음|매운탕|아구찜|아귀찜|해물찜/],
+ ['회·해산물',/횟집|회센터|활어|수산|해물|조개|대게|킹크랩|낙지|쭈꾸미|주꾸미|장어|복어|생선|물회|아구|아귀|굴국|전복/],
+ ['고기구이',/고기|갈비|삼겹|막창|곱창|대창|숯불|구이|정육|한우|소막|뭉티기|생고기|돼지|목살|양념육|오리|바베큐|bbq/i],
+ ['면·국수',/국수|칼국수|냉면|막국수|쌀국수|면옥|밀면|수제비|우동/],
+ ['일식',/스시|초밥|라멘|돈카츠|돈까스|돈가스|이자카야|오마카세|규동|소바|사케|텐동|덮밥/],
+ ['중식',/반점|중국|짬뽕|짜장|자장|마라|훠궈|양꼬치|딤섬|중화/],
+ ['분식·김밥',/분식|김밥|떡볶이|떡뽁이|라볶이|튀김|어묵|오뎅|순대/],
+ ['피자·버거·양식',/피자|버거|파스타|스테이크|레스토랑|양식|브런치|샌드위치|토스트|pizza|burger/i],
+ ['카페·디저트',/카페|까페|커피|베이커리|제과|디저트|빙수|케이크|케익|브레드|와플|도넛|coffee|cafe|bakery/i],
+ ['주점·호프',/호프|포차|주점|술집|비어|맥주|와인|소주|막걸리|펍|pub|bar\b/i],
+ ['백반·한정식',/백반|한정식|기사식당|밥상|가정식|쌈밥|비빔밥|보리밥|정식/],
+];
+function menuOf(name){const n=String(name||'');for(const [m,re] of MENUS)if(re.test(n))return m;return null;}
 /* ---------- bundled Daegu data ---------- */
 async function loadBundled(){
   $('result').innerHTML='<div class="empty">대구 일반음식점 97,575곳을 불러오는 중입니다…</div>';
@@ -350,7 +373,7 @@ async function loadBundled(){
       out[i]={id:i+1,name:j.n[i]||'(이름 없음)',type:j.types[j.t[i]],gu,dong:j.dongs[j.d[i]],
         addr:'대구광역시 '+gu+' '+j.a[i],closed,start:j.s[i]*DAY,end:closed?j.e[i]*DAY:null,
         x:j.x[i]||null,y:j.y[i]||null,warn:!!j.w[i]};
-      out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
+      out[i].menu=menuOf(out[i].name);out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
     }
     DATA=out;buildLabels();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
     selId=pickDefault();renderSrc(out.filter(d=>d.x!=null).length);runSearch();render();
@@ -368,13 +391,15 @@ function pickDefault(){
 /* ---------- compute ---------- */
 function compute(){
   const sel=DATA.find(d=>d.id===selId);if(!sel)return null;
-  const k=+$('k').value,sameType=$('sameType').checked,sameGu=$('sameGu').checked;
+  const k=+$('k').value,mode=$('cmpMode').value,sameGu=$('sameGu').checked;
+  const basis=mode==='menu'&&!sel.menu?'type':mode;
   if(sel.x==null)return {sel,err:'이 가게는 좌표 정보가 없어 주변 점포를 찾을 수 없습니다.'};
   const own=years(sel);if(!isFinite(own))return {sel,err:'이 가게는 폐업일자가 없어 영업 기간을 계산할 수 없습니다.'};
   const cand=[];
   for(const d of DATA){
     if(d.id===sel.id||!d.closed||d.x==null||!d.end)continue;
-    if(sameType&&d.type!==sel.type)continue;
+    if(basis==='type'&&d.type!==sel.type)continue;
+    if(basis==='menu'&&d.menu!==sel.menu)continue;
     if(sameGu&&d.gu!==sel.gu)continue;
     const yr=(d.end-d.start)/YEAR;if(!(yr>=0))continue;
     cand.push({d,yr,dist:Math.hypot(d.x-sel.x,d.y-sel.y)});
@@ -385,7 +410,7 @@ function compute(){
   const ys=nb.map(n=>n.yr).sort((a,b)=>a-b);
   const avg=ys.reduce((a,b)=>a+b,0)/ys.length;
   const med=ys.length%2?ys[(ys.length-1)/2]:(ys[ys.length/2-1]+ys[ys.length/2])/2;
-  return {sel,own,nb,avg,med,min:ys[0],max:ys[ys.length-1],radius:nb[nb.length-1].dist,ratio:avg>0?own/avg:NaN,k,total:cand.length};
+  return {sel,own,nb,avg,med,min:ys[0],max:ys[ys.length-1],radius:nb[nb.length-1].dist,ratio:avg>0?own/avg:NaN,k,total:cand.length,basis,mode};
 }
 
 /* ---------- render ---------- */
@@ -404,7 +429,7 @@ function render(){
   const box=$('result'),tbl=$('tbl');
   if(!R){box.innerHTML='<div class="empty">왼쪽에서 가게를 골라 주세요.</div>';tbl.innerHTML='';draw();return;}
   const s=R.sel;
-  const head=`<div><p class="store-name">${esc(s.name)}</p><p class="store-meta">${esc(s.type)} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} · <a href="${naverUrl(s)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></p></div>`;
+  const head=`<div><p class="store-name">${esc(s.name)}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} · <a href="${naverUrl(s)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></p></div>`;
   if(R.err){box.innerHTML=`<h2>생존 점수</h2>${head}<p class="err">${esc(R.err)}</p>`;tbl.innerHTML='';draw();return;}
   const [vt,vc]=verdict(R.ratio);const mx=Math.max(R.own,R.avg)*1.05||1;
   box.innerHTML=`<h2>생존 점수</h2>
@@ -424,11 +449,12 @@ function render(){
      <div class="stat"><span>탐색 반경</span><b>${fm(R.radius)}</b></div>
      <div class="stat"><span>후보 폐업 점포</span><b>${R.total.toLocaleString()}</b></div>
    </div>
+   <p class="hint">비교 기준: <b>${R.basis==='menu'?`같은 메뉴(${esc(s.menu)})`:R.basis==='type'?`같은 업태(${esc(s.type)})`:'모든 음식점'}</b>${R.mode==='menu'&&R.basis==='type'?' · 상호명으로 메뉴를 알 수 없어 같은 업태로 비교했습니다.':''}${R.basis==='type'&&s.type==='한식'?' · 한식은 국밥·고기·백반 등이 모두 섞인 넓은 분류입니다.':''}</p>
    ${R.nb.length<R.k?`<p class="hint">조건에 맞는 폐업 점포가 ${R.nb.length}곳뿐이라 k=${R.k} 대신 ${R.nb.length}곳으로 계산했습니다.</p>`:''}
    ${s.warn?'<p class="hint" style="color:var(--warn)">지위승계 이력이 있어 상호나 업종이 중간에 바뀌었을 수 있습니다. 영업 기간은 최초 인허가일 기준입니다.</p>':''}
    ${!s.closed?`<p class="hint">영업 중인 가게는 데이터 기준일(${REFLABEL})까지의 기간으로 계산하므로, 계속 영업할수록 배수가 올라갑니다.</p>`:''}`;
-  tbl.innerHTML=`<table><thead><tr><th>#</th><th>사업장명</th><th>업태</th><th>구·군</th><th style="text-align:right">거리</th><th style="text-align:right">영업 기간</th><th>개업 ~ 폐업</th></tr></thead><tbody>${
-    R.nb.map((n,i)=>`<tr><td class="n">${i+1}</td><td>${esc(n.d.name)}</td><td>${esc(n.d.type)}</td><td>${esc(n.d.gu||'–')}</td><td class="n">${fm(n.dist)}</td><td class="n">${n.yr.toFixed(1)}년</td><td>${fd(n.d.start)} ~ ${fd(n.d.end)}</td></tr>`).join('')}</tbody></table>`;
+  tbl.innerHTML=`<table><thead><tr><th>#</th><th>사업장명</th><th>업태</th><th>메뉴(추정)</th><th>구·군</th><th style="text-align:right">거리</th><th style="text-align:right">영업 기간</th><th>개업 ~ 폐업</th></tr></thead><tbody>${
+    R.nb.map((n,i)=>`<tr><td class="n">${i+1}</td><td>${esc(n.d.name)}</td><td>${esc(n.d.type)}</td><td>${esc(n.d.menu||'–')}</td><td>${esc(n.d.gu||'–')}</td><td class="n">${fm(n.dist)}</td><td class="n">${n.yr.toFixed(1)}년</td><td>${fd(n.d.start)} ~ ${fd(n.d.end)}</td></tr>`).join('')}</tbody></table>`;
   draw();
 }
 let LAST=null;
@@ -596,7 +622,7 @@ let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(runSe
 
 /* ---------- controls ---------- */
 $('k').addEventListener('input',()=>{$('kNum').textContent=$('k').value;render();});
-$('sameType').addEventListener('change',render);$('sameGu').addEventListener('change',render);
+$('cmpMode').addEventListener('change',render);$('sameGu').addEventListener('change',render);
 $('pickBtn').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change',e=>{onFiles(e.target.files);e.target.value='';});
 const drop=$('drop');
