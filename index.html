@@ -484,7 +484,9 @@ function pickDefault(){
 
 /* ---------- compute ---------- */
 function compute(){
-  const sel=DATA.find(d=>d.id===selId);if(!sel)return null;
+  let sel=DATA.find(d=>d.id===selId);
+  if(sel&&sel.closed){selId=pickDefault();sel=DATA.find(d=>d.id===selId);}
+  if(!sel)return null;
   const k=+$('k').value,mode=$('cmpMode').value,sameGu=$('sameGu').checked;
   const basis=mode==='menu'&&!sel.menu?'type':mode;
   if(sel.x==null)return {sel,err:'이 가게는 좌표 정보가 없어 주변 점포를 찾을 수 없습니다.'};
@@ -727,7 +729,7 @@ function showPop(d){
     <div class="pop-m">${esc(d.type)} · ${esc(d.gu||'')} ${esc(d.dong||'')}</div>
     <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
     ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
-    <div class="pop-a">${d.id!==selId?'<button class="primary" type="button" id="popSel">이 가게로 비교</button>':''}
+    <div class="pop-a">${d.id!==selId&&!d.closed?'<button class="primary" type="button" id="popSel">이 가게로 비교</button>':''}
       <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
   p.hidden=false;
   p.querySelector('.pop-x').onclick=()=>showPop(null);
@@ -782,8 +784,8 @@ function suggest(q){
   const areas=AREAS.filter(a=>t.every(w=>a.label.toLowerCase().includes(w))).sort((a,b)=>(a.kind===b.kind?b.n-a.n:a.kind==='구·군'?-1:1)).slice(0,4)
     .map(a=>({kind:'area',label:a.label,sub:`${a.kind} · 음식점 ${a.n.toLocaleString()}곳`,a}));
   const stores=[];
-  for(const d of DATA){if(t.every(w=>d.key.includes(w))){stores.push(d);if(stores.length>400)break;}}
-  stores.sort((a,b)=>(a.closed-b.closed)||(years(b)-years(a)));
+  for(const d of DATA){if(!d.closed&&t.every(w=>d.key.includes(w))){stores.push(d);if(stores.length>400)break;}}
+  stores.sort((a,b)=>years(b)-years(a));
   return areas.concat(stores.slice(0,8).map(d=>({kind:'store',label:d.name,sub:`${d.type} · ${d.gu} ${d.dong||''}${d.closed?' · 폐업':''}`,d})));
 }
 function applyStart(item,save=true){
@@ -802,7 +804,7 @@ function applyStart(item,save=true){
 function restoreStart(){
   let v=null;try{v=JSON.parse(localStorage.getItem(START_KEY)||'null');}catch(e){}
   if(!v)return false;
-  if(v.kind==='store'){const d=DATA.find(x=>x.id===v.id&&x.name===v.name);if(d){applyStart({kind:'store',d},false);return true;}}
+  if(v.kind==='store'){const d=DATA.find(x=>x.id===v.id&&x.name===v.name&&!x.closed);if(d){applyStart({kind:'store',d},false);return true;}}
   if(v.kind==='area'){const a=AREAS.find(x=>x.label===v.label);if(a){applyStart({kind:'area',a},false);return true;}}
   return false;
 }
@@ -855,7 +857,7 @@ function kInfo(d){
     <div class="pop-m">${esc(d.type)} · ${esc(d.gu||'')} ${esc(d.dong||'')}</div>
     <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
     ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
-    <div class="pop-a">${d.id!==selId?'<button class="primary" type="button" data-sel>이 가게로 비교</button>':''}
+    <div class="pop-a">${d.id!==selId&&!d.closed?'<button class="primary" type="button" data-sel>이 가게로 비교</button>':''}
       <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
   el.addEventListener('mousedown',e=>e.stopPropagation());
   el.querySelector('.pop-x').onclick=()=>kInfo(null);
@@ -933,15 +935,15 @@ function kInit(){
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
-  let rows=DATA;
-  if(q){const t=q.split(/\s+/).filter(Boolean);rows=DATA.filter(d=>t.every(w=>d.key.includes(w)));}
+  const OPEN=DATA.filter(d=>!d.closed);let rows=OPEN;
+  if(q){const t=q.split(/\s+/).filter(Boolean);rows=OPEN.filter(d=>t.every(w=>d.key.includes(w)));}
   const total=rows.length;rows=rows.slice(0,60);
   const sel=DATA.find(d=>d.id===selId);
   if(sel&&!rows.includes(sel)&&!q)rows=[sel,...rows.slice(0,59)];
   list.innerHTML=rows.map(d=>`<div class="item${d.id===selId?' sel':''}" role="option" tabindex="0" data-id="${d.id}" aria-selected="${d.id===selId}">
-    <div style="min-width:0"><b>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')}${d.fr?' · 프랜차이즈':''}${d.closed?' · 폐업':''}</small></div>
+    <div style="min-width:0"><b>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')}${d.fr?' · 프랜차이즈':''}</small></div>
     <div class="r">${fy(years(d))}</div></div>`).join('')||'<div class="empty" style="padding:20px">검색 결과가 없습니다.</div>';
-  $('listHint').textContent=total>60?`${total.toLocaleString()}곳 중 60곳만 보여줍니다. 검색어를 더 좁혀 보세요.`:`${total.toLocaleString()}곳`;
+  $('listHint').textContent=total>60?`영업 중인 가게 ${total.toLocaleString()}곳 중 60곳만 보여줍니다. 검색어를 더 좁혀 보세요.`:`영업 중인 가게 ${total.toLocaleString()}곳`;
 }
 $('list').addEventListener('click',e=>{const it=e.target.closest('.item');if(!it)return;selId=+it.dataset.id;runSearch();render();});
 $('list').addEventListener('keydown',e=>{if(e.key==='Enter'){const it=e.target.closest('.item');if(it){selId=+it.dataset.id;runSearch();render();}}});
