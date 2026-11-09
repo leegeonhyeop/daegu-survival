@@ -114,6 +114,11 @@ a{color:var(--accent)}
 .pop-a a{font-weight:600;text-decoration:none}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.lg-tg{display:inline-flex;align-items:center;gap:0;cursor:pointer;color:var(--ink);font-size:12px}
+.lg-tg input{margin:0 6px 0 0;accent-color:var(--accent)}
+.legend i.lg-open{width:11px;height:11px;background:#16A34A;border:2px solid #fff;box-shadow:0 0 0 1px #16A34A}
+.legend i.lg-closed{width:11px;height:11px;background:transparent;border:2px solid #E11D48;position:relative}
+.legend i.lg-closed::after{content:"";position:absolute;left:50%;top:50%;width:9px;height:2px;background:#E11D48;transform:translate(-50%,-50%) rotate(-45deg)}
 .tbl{overflow-x:auto;max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -195,8 +200,8 @@ tr:hover td{background:var(--accent-soft)}
         <div class="legend">
           <span><i style="background:var(--accent)"></i>선택한 가게</span>
           <span><i style="background:var(--near)"></i>비교 대상 폐업 점포 k곳 (번호 = 가까운 순)</span>
-          <span><i style="background:var(--open)"></i>그 밖의 영업 점포</span>
-          <span><i style="background:var(--closed)"></i>그 밖의 폐업 점포</span>
+          <label class="lg-tg"><input type="checkbox" id="showOpen" checked><i class="lg-open"></i>영업 중인 가게</label>
+          <label class="lg-tg"><input type="checkbox" id="showClosed" checked><i class="lg-closed"></i>폐업한 가게</label>
         </div>
         <p class="hint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
       </section>
@@ -535,12 +540,22 @@ function paint(){
   const hx=W/2/V.sc+20,hy=H/2/V.sc+20;
   const dot=V.sc>.6?3.2:V.sc>.15?2.4:1.6;
   // dots: closed first, open on top
-  if(!TILE.ok||V.sc>=.12)for(const pass of [1,0]){
-    c.fillStyle=pass?cssv('--closed'):cssv('--open');c.globalAlpha=pass?.5:.75;
-    for(const d of DATA){
-      if(d.x==null||d.closed!==!!pass||near.has(d.id)||d.id===s.id)continue;
-      if(Math.abs(d.x-V.cx)>hx||Math.abs(d.y-V.cy)>hy)continue;
-      c.fillRect(sx(d.x)-dot/2,sy(d.y)-dot/2,dot,dot);
+  // 영업 중 = 초록 꽉 찬 원, 폐업 = 빨간 빈 원에 사선
+  const showO=$('showOpen').checked,showC=$('showClosed').checked;
+  if(!TILE.ok||V.sc>=.12){
+    const big=V.sc>=.12,rd=big?(V.sc>=.5?5:V.sc>=.25?4:3):1.3;
+    for(const pass of [1,0]){
+      if(pass?!showC:!showO)continue;
+      for(const d of DATA){
+        if(d.x==null||d.closed!==!!pass||near.has(d.id)||d.id===s.id)continue;
+        if(Math.abs(d.x-V.cx)>hx||Math.abs(d.y-V.cy)>hy)continue;
+        const x=sx(d.x),y=sy(d.y);
+        if(!big){c.fillStyle=pass?'rgba(225,29,72,.45)':'rgba(22,163,74,.8)';c.fillRect(x-rd,y-rd,rd*2,rd*2);continue;}
+        if(pass){c.globalAlpha=.85;c.strokeStyle='#fff';c.lineWidth=3.2;c.beginPath();c.arc(x,y,rd,0,7);c.stroke();
+          c.strokeStyle='#E11D48';c.lineWidth=1.6;c.beginPath();c.arc(x,y,rd,0,7);c.stroke();
+          c.beginPath();c.moveTo(x-rd*.7,y+rd*.7);c.lineTo(x+rd*.7,y-rd*.7);c.stroke();c.globalAlpha=1;}
+        else{c.fillStyle='#16A34A';c.strokeStyle='#fff';c.lineWidth=1.5;c.beginPath();c.arc(x,y,rd,0,7);c.fill();c.stroke();}
+      }
     }
   }
   c.globalAlpha=1;
@@ -664,7 +679,7 @@ let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(runSe
 
 /* ---------- controls ---------- */
 $('k').addEventListener('input',()=>{$('kNum').textContent=$('k').value;render();});
-$('cmpMode').addEventListener('change',render);$('sameGu').addEventListener('change',render);
+$('cmpMode').addEventListener('change',render);$('showOpen').addEventListener('change',()=>req());$('showClosed').addEventListener('change',()=>req());$('sameGu').addEventListener('change',render);
 $('pickBtn').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change',e=>{onFiles(e.target.files);e.target.value='';});
 const drop=$('drop');
