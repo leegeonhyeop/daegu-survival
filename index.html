@@ -95,6 +95,21 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+#kmap{width:100%;height:460px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+@media (max-width:560px){#kmap{height:400px}}
+.nzoom{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;background:#fff;color:#333;border-radius:99px;padding:4px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.2);white-space:nowrap;pointer-events:none}
+.kpop{position:relative;width:250px;margin-bottom:14px;color:var(--ink)}
+.k-sel{display:flex;flex-direction:column;align-items:center}
+.k-sel span{background:#1F62A8;color:#fff;font:700 12.5px/1 var(--f-body);padding:6px 10px;border-radius:99px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.k-sel i{width:0;height:0;border:7px solid transparent;border-top:9px solid #1F62A8;border-bottom:0}
+.k-num{width:22px;height:22px;border-radius:50%;background:#E07B12;color:#fff;border:2px solid #fff;font:600 10px/18px var(--f-mono);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.k-dot{width:11px;height:11px;border-radius:50%;box-sizing:border-box}
+.k-open{background:#16A34A;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.k-closed{background:rgba(255,255,255,.85);border:2px solid #E11D48;position:relative}
+.k-closed::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:2px;background:#E11D48;transform:translate(-50%,-50%) rotate(-45deg)}
+.k-near{background:#E07B12;border:2px solid #fff}
+.k-fr{width:11px;height:11px;border-radius:1px;background:#7C3AED;border:1.5px solid #fff;transform:rotate(45deg);box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.k-fr-c{background:#fff;border:2px solid #7C3AED}
 .start{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 20px;display:flex;flex-direction:column;gap:12px;max-width:720px;width:100%;margin:0 auto;box-shadow:0 6px 24px rgba(20,40,70,.08)}
 .start h2{margin:0;font-size:20px;text-wrap:balance}
 .start>p{margin:0;color:var(--muted)}
@@ -237,7 +252,7 @@ tr:hover td{background:var(--accent-soft)}
       <section class="panel" id="result" aria-live="polite"></section>
       <section class="panel" aria-labelledby="h-map">
         <h2 id="h-map">위치</h2>
-        <div class="mapbox"><canvas id="cv" aria-label="선택 가게와 주변 폐업 점포 지도. 드래그로 이동, 휠로 확대"></canvas>
+        <div class="mapbox"><div id="kmap" hidden></div><div class="nzoom" id="kzoom" hidden>더 확대하면 주변 가게가 모두 보입니다</div><canvas id="cv" aria-label="선택 가게와 주변 폐업 점포 지도. 드래그로 이동, 휠로 확대"></canvas>
           <div class="zoom">
             <button type="button" id="zin" aria-label="확대">+</button>
             <button type="button" id="zout" aria-label="축소">−</button>
@@ -255,7 +270,7 @@ tr:hover td{background:var(--accent-soft)}
           <label class="lg-tg"><input type="checkbox" id="showClosed" checked><i class="lg-closed"></i>폐업한 가게</label>
           <label class="lg-tg"><input type="checkbox" id="showFr" checked><i class="lg-fr"></i>프랜차이즈 (빈 마름모 = 폐업)</label>
         </div>
-        <p class="hint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
+        <p class="hint" id="mapHint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
       </section>
       <section class="panel" aria-labelledby="h-tbl">
         <h2 id="h-tbl">비교 대상 폐업 점포</h2>
@@ -558,7 +573,7 @@ function fitView(){
   V.cx=R.sel.x;V.cy=R.sel.y;V.sc=Math.min(V.W,V.H)/(2*rad);V.ok=true;
 }
 function req(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();});}
-const draw=req;
+const draw=()=>{if(typeof KK!=='undefined'&&KK.on)kRender();else req();};
 const sx=x=>V.W/2+(x-V.cx)*V.sc, sy=y=>V.H/2-(y-V.cy)*V.sc;
 /* ---------- 지도 배경 (일반 지도 그림 타일) ---------- */
 const CLAT=[35.87520367,-0.001428042683,0.09009159064,-5.101531568e-05,-4.695187055e-06,-7.355089499e-07,-7.056102884e-09,-2.008955655e-07,-1.252978539e-08,5.481478343e-09];
@@ -820,6 +835,101 @@ function startReady(){
   if($('startQ').value)showSug();
 }
 
+/* ---------- 카카오맵 ---------- */
+const KAKAO_JS_KEY='d4841f91d2bf28d0a9fc905f84959147';
+const KK={on:false,map:null,ov:[],dots:[],info:null,circle:null};
+function kLL(d){const [la,lo]=tmToLL(d.x,d.y);return new kakao.maps.LatLng(la,lo);}
+function kEl(html,onClick){const w=document.createElement('div');w.innerHTML=html;const el=w.firstElementChild;if(onClick){el.style.cursor='pointer';el.addEventListener('click',e=>{e.stopPropagation();onClick();});}return el;}
+function kAdd(arr,d,html,yA,z,onClick){
+  const o=new kakao.maps.CustomOverlay({position:kLL(d),content:kEl(html,onClick),xAnchor:.5,yAnchor:yA,zIndex:z,clickable:true});
+  o.setMap(KK.map);arr.push(o);return o;
+}
+function kClear(arr){arr.forEach(o=>o.setMap(null));arr.length=0;}
+function kInfo(d){
+  if(KK.info){KK.info.setMap(null);KK.info=null;}
+  if(!d)return;
+  const yr=years(d),R=LAST,rank=(R?.nb||[]).findIndex(n=>n.d.id===d.id);
+  const el=document.createElement('div');el.className='pop kpop';
+  el.innerHTML=`<button class="pop-x" type="button" aria-label="닫기">×</button>
+    <b>${esc(d.name)}</b>${d.fr?` <span class="chip fr">프랜차이즈 · ${esc(d.fr)}</span>`:''}
+    <div class="pop-m">${esc(d.type)} · ${esc(d.gu||'')} ${esc(d.dong||'')}</div>
+    <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
+    ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
+    <div class="pop-a">${d.id!==selId?'<button class="primary" type="button" data-sel>이 가게로 비교</button>':''}
+      <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
+  el.addEventListener('mousedown',e=>e.stopPropagation());
+  el.querySelector('.pop-x').onclick=()=>kInfo(null);
+  const b=el.querySelector('[data-sel]');if(b)b.onclick=()=>{kInfo(null);selId=d.id;runSearch();render();};
+  KK.info=new kakao.maps.CustomOverlay({position:kLL(d),content:el,xAnchor:.5,yAnchor:1,zIndex:2000,clickable:true});
+  KK.info.setMap(KK.map);
+}
+function kRender(){
+  if(!KK.map)return;kInfo(null);kClear(KK.ov);if(KK.circle){KK.circle.setMap(null);KK.circle=null;}
+  const R=LAST;if(!R||R.sel.x==null){kDots();return;}
+  const s=R.sel,c=kLL(s);
+  if(R.radius){
+    KK.circle=new kakao.maps.Circle({center:c,radius:R.radius,strokeWeight:2,strokeColor:'#E07B12',strokeOpacity:.9,strokeStyle:'shortdash',fillColor:'#F5A623',fillOpacity:.1});
+    KK.circle.setMap(KK.map);
+  }
+  const nb=R.nb||[],numbered=nb.length<=60;
+  nb.forEach((n,i)=>{if(n.d.x==null)return;
+    kAdd(KK.ov,n.d,numbered?`<div class="k-num">${i+1}</div>`:'<div class="k-dot k-near"></div>',.5,500-i,()=>kInfo(n.d));});
+  const nm=s.name.length>14?s.name.slice(0,13)+'…':s.name;
+  kAdd(KK.ov,s,`<div class="k-sel"><span>${esc(nm)}</span><i></i></div>`,1,1000,()=>kInfo(s));
+  const r=Math.max(R.radius||0,150)*1.15,[la,lo]=tmToLL(s.x,s.y);
+  const dLa=r/111320,dLo=r/(111320*Math.cos(la*Math.PI/180));
+  KK.map.setBounds(new kakao.maps.LatLngBounds(new kakao.maps.LatLng(la-dLa,lo-dLo),new kakao.maps.LatLng(la+dLa,lo+dLo)),24,24,24,24);
+  kDots();
+}
+function kDots(){
+  if(!KK.map)return;kClear(KK.dots);
+  const lv=KK.map.getLevel();$('kzoom').hidden=lv<=4;if(lv>4)return;
+  const b=KK.map.getBounds(),sw=b.getSouthWest(),ne=b.getNorthEast();
+  const cs=[[sw.getLat(),sw.getLng()],[sw.getLat(),ne.getLng()],[ne.getLat(),sw.getLng()],[ne.getLat(),ne.getLng()]].map(([a,o])=>llToTM(a,o));
+  const x0=Math.min(...cs.map(p=>p[0])),x1=Math.max(...cs.map(p=>p[0])),y0=Math.min(...cs.map(p=>p[1])),y1=Math.max(...cs.map(p=>p[1]));
+  const R=LAST,skip=new Set([R?.sel?.id,...(R?.nb||[]).map(n=>n.d.id)]);
+  const sO=$('showOpen').checked,sC=$('showClosed').checked,sF=$('showFr').checked;let c=0;
+  for(const d of DATA){
+    if(d.x==null||skip.has(d.id)||d.x<x0||d.x>x1||d.y<y0||d.y>y1)continue;
+    if(d.fr?!sF:(d.closed?!sC:!sO))continue;
+    const cls=d.fr?(d.closed?'k-fr k-fr-c':'k-fr'):(d.closed?'k-closed':'k-open');
+    kAdd(KK.dots,d,`<div class="k-dot ${cls}" title="${esc(d.name)}"></div>`,.5,d.closed?1:2,()=>kInfo(d));
+    if(++c>=600)break;
+  }
+}
+function kFail(msg){
+  KK.on=false;$('kmap').hidden=true;$('cv').hidden=false;
+  document.querySelectorAll('.mapbox .zoom,#mapType').forEach(e=>e.hidden=false);
+  $('mapMsg').textContent=msg;$('mapMsg').hidden=false;setTimeout(()=>$('mapMsg').hidden=true,6000);req();
+}
+function kInit(){
+  if(!KAKAO_JS_KEY)return;
+  const t=setTimeout(()=>{if(!KK.on)kFail('카카오맵을 불러오지 못해 기본 지도로 표시합니다.');},8000);
+  const sc=document.createElement('script');
+  sc.src='https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey='+KAKAO_JS_KEY;
+  sc.onerror=()=>{clearTimeout(t);kFail('카카오맵을 불러오지 못해 기본 지도로 표시합니다.');};
+  sc.onload=()=>{
+    if(!window.kakao||!kakao.maps||!kakao.maps.load){clearTimeout(t);kFail('카카오맵을 시작하지 못해 기본 지도로 표시합니다.');return;}
+    kakao.maps.load(()=>{
+      clearTimeout(t);
+      $('cv').hidden=true;$('pop').hidden=true;$('mapAttr').hidden=true;
+      document.querySelectorAll('.mapbox .zoom,#mapType').forEach(e=>e.hidden=true);
+      $('kmap').hidden=false;
+      KK.map=new kakao.maps.Map($('kmap'),{center:new kakao.maps.LatLng(35.8714,128.6014),level:5});
+      KK.map.addControl(new kakao.maps.MapTypeControl(),kakao.maps.ControlPosition.TOPRIGHT);
+      KK.map.addControl(new kakao.maps.ZoomControl(),kakao.maps.ControlPosition.RIGHT);
+      kakao.maps.event.addListener(KK.map,'click',()=>kInfo(null));
+      let tt;kakao.maps.event.addListener(KK.map,'idle',()=>{clearTimeout(tt);tt=setTimeout(kDots,100);});
+      KK.on=true;
+      $('mapHint').textContent='드래그로 이동하고 휠·두 손가락으로 확대합니다. 오른쪽 위에서 지도·스카이뷰를 바꿀 수 있고, 가까이 확대하면 주변 가게가 모두 표시됩니다.';
+      ['showOpen','showClosed','showFr'].forEach(id=>$(id).addEventListener('change',()=>{if(KK.on)kDots();}));
+      window.addEventListener('resize',()=>{if(KK.map)KK.map.relayout();});
+      if(LAST)kRender();
+    });
+  };
+  document.head.appendChild(sc);
+}
+
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
@@ -859,7 +969,7 @@ window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTim
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',draw);
 new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
-startInit();loadBundled();
+startInit();loadBundled();kInit();
 })();
 </script>
 
