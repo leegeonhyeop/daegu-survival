@@ -124,6 +124,14 @@ button:disabled{opacity:.5;cursor:default}
 .sug-k{grid-row:span 2;align-self:center;font-size:11px;font-weight:700;padding:3px 7px;border-radius:99px;background:var(--line);color:var(--muted)}
 .sug-k.area{background:var(--near-soft);color:var(--near)}
 .sug-k.store{background:var(--accent-soft);color:var(--accent)}
+.item.closed{background:repeating-linear-gradient(-45deg,transparent 0 8px,rgba(225,29,72,.05) 8px 16px);cursor:not-allowed}
+.item.closed b{color:var(--muted)}
+.item.closed:hover{background:repeating-linear-gradient(-45deg,transparent 0 8px,rgba(225,29,72,.09) 8px 16px)}
+.badge-closed{display:inline-block;background:#E11D48;color:#fff;font-size:11px;font-weight:700;line-height:1;padding:3px 7px;border-radius:99px;margin-right:6px;vertical-align:1px}
+.sug-k.closed{background:#E11D48;color:#fff}
+.sug.sug-closed{cursor:not-allowed}
+.sug.sug-closed b{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(225,29,72,.6)}
+.sug.sug-closed small{color:#C0263F}
 .start-ex{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
 .start-ex button{padding:4px 10px;border-radius:99px;font-size:12.5px}
 .start-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -784,11 +792,13 @@ function suggest(q){
   const areas=AREAS.filter(a=>t.every(w=>a.label.toLowerCase().includes(w))).sort((a,b)=>(a.kind===b.kind?b.n-a.n:a.kind==='구·군'?-1:1)).slice(0,4)
     .map(a=>({kind:'area',label:a.label,sub:`${a.kind} · 음식점 ${a.n.toLocaleString()}곳`,a}));
   const stores=[];
-  for(const d of DATA){if(!d.closed&&t.every(w=>d.key.includes(w))){stores.push(d);if(stores.length>400)break;}}
+  const closedS=[];for(const d of DATA){if(t.every(w=>d.key.includes(w))){if(d.closed){if(closedS.length<3)closedS.push(d);}else{stores.push(d);if(stores.length>400)break;}}}
   stores.sort((a,b)=>years(b)-years(a));
-  return areas.concat(stores.slice(0,8).map(d=>({kind:'store',label:d.name,sub:`${d.type} · ${d.gu} ${d.dong||''}${d.closed?' · 폐업':''}`,d})));
+  return areas.concat(stores.slice(0,8).map(d=>({kind:'store',label:d.name,sub:`${d.type} · ${d.gu} ${d.dong||''}`,d})),
+    closedS.map(d=>({kind:'closed',label:d.name,sub:`${d.type} · ${d.gu} ${d.dong||''} · ${fd(d.end)} 폐업 · 선택할 수 없음`,d})));
 }
 function applyStart(item,save=true){
+  if(!item||item.kind==='closed'){$('startStatus').textContent='폐업한 가게는 선택할 수 없어요. 영업 중인 가게나 지역을 골라 주세요.';return;}
   if(item.kind==='store'){selId=item.d.id;$('q').value='';}
   else{
     const a=item.a;let best=null,bd=Infinity;
@@ -813,7 +823,7 @@ function showSug(){
   const box=$('startSug');SUG=suggest($('startQ').value);SUGI=0;
   if(!DATA.length){box.innerHTML='';return;}
   if(!$('startQ').value.trim()){box.innerHTML='';return;}
-  box.innerHTML=SUG.length?SUG.map((s,i)=>`<button type="button" class="sug${i===0?' on':''}" data-i="${i}" role="option"><span class="sug-k ${s.kind}">${s.kind==='area'?'지역':'가게'}</span><b>${esc(s.label)}</b><small>${esc(s.sub)}</small></button>`).join('')
+  box.innerHTML=SUG.length?SUG.map((s,i)=>`<button type="button" class="sug${i===0?' on':''}${s.kind==='closed'?' sug-closed':''}" data-i="${i}" role="option"${s.kind==='closed'?' aria-disabled="true"':''}><span class="sug-k ${s.kind}">${s.kind==='area'?'지역':s.kind==='closed'?'폐업':'가게'}</span><b>${esc(s.label)}</b><small>${esc(s.sub)}</small></button>`).join('')
     :'<p class="hint" style="padding:8px 4px">찾는 가게나 지역이 없습니다. 상호 일부나 동 이름으로 입력해 보세요.</p>';
 }
 function startInit(){
@@ -935,18 +945,25 @@ function kInit(){
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
-  const OPEN=DATA.filter(d=>!d.closed);let rows=OPEN;
-  if(q){const t=q.split(/\s+/).filter(Boolean);rows=OPEN.filter(d=>t.every(w=>d.key.includes(w)));}
-  const total=rows.length;rows=rows.slice(0,60);
+  let rows=DATA.filter(d=>!d.closed),nClosed=0;
+  if(q){const t=q.split(/\s+/).filter(Boolean);const m=DATA.filter(d=>t.every(w=>d.key.includes(w)));
+    const o=m.filter(d=>!d.closed),c=m.filter(d=>d.closed);nClosed=c.length;
+    const oN=Math.min(o.length,60-Math.min(c.length,15));rows=o.slice(0,oN).concat(c.slice(0,60-oN));rows.total=o.length;}
+  const total=rows.total??rows.length;rows=rows.slice(0,60);
   const sel=DATA.find(d=>d.id===selId);
   if(sel&&!rows.includes(sel)&&!q)rows=[sel,...rows.slice(0,59)];
-  list.innerHTML=rows.map(d=>`<div class="item${d.id===selId?' sel':''}" role="option" tabindex="0" data-id="${d.id}" aria-selected="${d.id===selId}">
+  list.innerHTML=rows.map(d=>d.closed
+    ?`<div class="item closed" role="option" aria-disabled="true" tabindex="0" data-id="${d.id}" title="폐업한 가게는 선택할 수 없습니다">
+    <div style="min-width:0"><b><span class="badge-closed">폐업</span>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')} · ${fd(d.end)} 폐업</small></div>
+    <div class="r">${fy(years(d))}</div></div>`
+    :`<div class="item${d.id===selId?' sel':''}" role="option" tabindex="0" data-id="${d.id}" aria-selected="${d.id===selId}">
     <div style="min-width:0"><b>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')}${d.fr?' · 프랜차이즈':''}</small></div>
     <div class="r">${fy(years(d))}</div></div>`).join('')||'<div class="empty" style="padding:20px">검색 결과가 없습니다.</div>';
-  $('listHint').textContent=total>60?`영업 중인 가게 ${total.toLocaleString()}곳 중 60곳만 보여줍니다. 검색어를 더 좁혀 보세요.`:`영업 중인 가게 ${total.toLocaleString()}곳`;
+  $('listHint').textContent=`영업 중인 가게 ${total.toLocaleString()}곳`+(nClosed?` · 폐업한 가게 ${nClosed.toLocaleString()}곳`:'')+(total+nClosed>60?' 중 60곳만 보여줍니다. 검색어를 더 좁혀 보세요.':'');
 }
-$('list').addEventListener('click',e=>{const it=e.target.closest('.item');if(!it)return;selId=+it.dataset.id;runSearch();render();});
-$('list').addEventListener('keydown',e=>{if(e.key==='Enter'){const it=e.target.closest('.item');if(it){selId=+it.dataset.id;runSearch();render();}}});
+function pickItem(it){if(it.classList.contains('closed')){$('listHint').textContent='폐업한 가게는 비교할 수 없어요. 영업 중인 가게를 골라 주세요.';return;}selId=+it.dataset.id;runSearch();render();}
+$('list').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)pickItem(it);});
+$('list').addEventListener('keydown',e=>{if(e.key==='Enter'){const it=e.target.closest('.item');if(it)pickItem(it);}});
 let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(runSearch,150);});
 
 /* ---------- controls ---------- */
