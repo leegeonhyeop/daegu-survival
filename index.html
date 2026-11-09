@@ -95,6 +95,11 @@ button:disabled{opacity:.5;cursor:default}
 .mapbox{position:relative}
 .attr{position:absolute;right:6px;bottom:6px;font-size:10px;color:#333;background:rgba(255,255,255,.8);padding:1px 6px;border-radius:3px}
 .attr a{color:#333}
+.maptype{position:absolute;top:10px;left:10px;display:flex;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.25);overflow:hidden;z-index:2}
+.maptype button{border:0;border-radius:0;background:#fff;color:#555;font:600 12.5px var(--f-body);padding:7px 13px}
+.maptype button+button{border-left:1px solid #e3e3e3}
+.maptype button.on{background:#1F62A8;color:#fff}
+.mapmsg{position:absolute;top:50px;left:50%;transform:translateX(-50%);background:#fff;color:#333;font-size:12px;padding:5px 12px;border-radius:99px;box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:3;white-space:nowrap}
 canvas{width:100%;height:460px;display:block;border-radius:8px;background:var(--mapbg);cursor:grab;touch-action:none;border:1px solid var(--line)}
 canvas.drag{cursor:grabbing}
 @media (max-width:560px){canvas{height:400px}}
@@ -196,6 +201,8 @@ tr:hover td{background:var(--accent-soft)}
             <button type="button" id="zall" aria-label="대구 전체 보기"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3"/></svg></button>
           </div>
           <div class="pop" id="pop" hidden></div>
+          <div class="maptype" id="mapType" role="group" aria-label="지도 종류"><button type="button" data-t="map" class="on" aria-pressed="true">지도</button><button type="button" data-t="sat" aria-pressed="false">위성</button></div>
+          <div class="mapmsg" id="mapMsg" hidden></div>
           <div class="attr" id="mapAttr" hidden>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자</div></div>
         <div class="legend">
           <span><i style="background:var(--accent)"></i>선택한 가게</span>
@@ -499,19 +506,30 @@ const tmToLL=(x,y)=>{const a=(x-340000)/1e4,b=(y-265000)/1e4;return [poly(CLAT,a
 const llToTM=(lat,lng)=>{const p=(lng-128.6)*10,q=(lat-35.87)*10;return [poly(CX,p,q),poly(CY,p,q)];};
 const t2lon=(x,n)=>x/n*360-180, t2lat=(y,n)=>Math.atan(Math.sinh(Math.PI*(1-2*y/n)))*180/Math.PI;
 const lon2t=(lon,n)=>(lon+180)/360*n, lat2t=(lat,n)=>{const r=lat*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n;};
-const TILE={cache:new Map(),ok:false};
+const TILE={cache:new Map(),ok:false,type:'map',satOk:false,satErr:0};
 function tileImg(z,x,y,r){
-  const k=z+'/'+x+'/'+y+r;let im=TILE.cache.get(k);if(im)return im;
+  const t=TILE.type,k=t+'/'+z+'/'+x+'/'+y+r;let im=TILE.cache.get(k);if(im)return im;
   im=new Image();im.decoding='async';
-  im.onload=()=>{if(!TILE.ok){TILE.ok=true;const a=$('mapAttr');if(a)a.hidden=false;}req();};
-  im.src=`https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+  im.onload=()=>{if(!TILE.ok){TILE.ok=true;$('mapAttr').hidden=false;}if(t==='sat')TILE.satOk=true;req();};
+  if(t==='sat'){
+    im.onerror=()=>{if(!TILE.satOk&&++TILE.satErr>=4){setMapType('map');$('mapMsg').textContent='위성 사진을 불러오지 못해 일반 지도로 돌아왔습니다.';$('mapMsg').hidden=false;setTimeout(()=>$('mapMsg').hidden=true,4000);}};
+    im.src=`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+  }else im.src=`https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
   TILE.cache.set(k,im);
   if(TILE.cache.size>500)TILE.cache.delete(TILE.cache.keys().next().value);
   return im;
 }
+function setMapType(t){
+  TILE.type=t;
+  document.querySelectorAll('#mapType button').forEach(b=>{const on=b.dataset.t===t;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
+  $('mapAttr').innerHTML=t==='sat'
+    ?'위성 사진 © <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics'
+    :'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자';
+  $('cv').classList.toggle('sat',t==='sat');req();
+}
 function drawTiles(c,W,H,dpr){
   const lat0=tmToLL(V.cx,V.cy)[0];
-  let z=Math.round(Math.log2(156543.034*Math.cos(lat0*Math.PI/180)*V.sc));z=Math.max(7,Math.min(19,z));
+  let z=Math.round(Math.log2(156543.034*Math.cos(lat0*Math.PI/180)*V.sc));z=Math.max(7,Math.min(TILE.type==='sat'?18:19,z));
   const n=2**z,r='';
   const cs=[[0,0],[W,0],[0,H],[W,H]].map(([px,py])=>tmToLL(V.cx+(px-W/2)/V.sc,V.cy-(py-H/2)/V.sc));
   const la=cs.map(p=>p[0]),lo=cs.map(p=>p[1]);
@@ -679,7 +697,7 @@ let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(runSe
 
 /* ---------- controls ---------- */
 $('k').addEventListener('input',()=>{$('kNum').textContent=$('k').value;render();});
-$('cmpMode').addEventListener('change',render);$('showOpen').addEventListener('change',()=>req());$('showClosed').addEventListener('change',()=>req());$('sameGu').addEventListener('change',render);
+$('cmpMode').addEventListener('change',render);$('showOpen').addEventListener('change',()=>req());document.querySelectorAll('#mapType button').forEach(b=>b.addEventListener('click',()=>setMapType(b.dataset.t)));$('showClosed').addEventListener('change',()=>req());$('sameGu').addEventListener('change',render);
 $('pickBtn').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change',e=>{onFiles(e.target.files);e.target.value='';});
 const drop=$('drop');
