@@ -93,6 +93,8 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+.attr{position:absolute;right:6px;bottom:6px;font-size:10px;color:#333;background:rgba(255,255,255,.8);padding:1px 6px;border-radius:3px}
+.attr a{color:#333}
 canvas{width:100%;height:460px;display:block;border-radius:8px;background:var(--mapbg);cursor:grab;touch-action:none;border:1px solid var(--line)}
 canvas.drag{cursor:grabbing}
 @media (max-width:560px){canvas{height:400px}}
@@ -188,7 +190,8 @@ tr:hover td{background:var(--accent-soft)}
             <button type="button" id="zfit" aria-label="선택한 가게로 이동"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg></button>
             <button type="button" id="zall" aria-label="대구 전체 보기"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3"/></svg></button>
           </div>
-          <div class="pop" id="pop" hidden></div></div>
+          <div class="pop" id="pop" hidden></div>
+          <div class="attr" id="mapAttr" hidden>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a></div></div>
         <div class="legend">
           <span><i style="background:var(--accent)"></i>선택한 가게</span>
           <span><i style="background:var(--near)"></i>비교 대상 폐업 점포 k곳 (번호 = 가까운 순)</span>
@@ -481,6 +484,44 @@ function fitView(){
 function req(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();});}
 const draw=req;
 const sx=x=>V.W/2+(x-V.cx)*V.sc, sy=y=>V.H/2-(y-V.cy)*V.sc;
+/* ---------- 지도 배경 (일반 지도 그림 타일) ---------- */
+const CLAT=[35.87520367,-0.001428042683,0.09009159064,-5.101531568e-05,-4.695187055e-06,-7.355089499e-07,-7.056102884e-09,-2.008955655e-07,-1.252978539e-08,5.481478343e-09];
+const CLNG=[128.5510265,0.1106940598,0.001754589022,-3.911791043e-06,0.0001253621543,3.839321545e-06,-1.146929003e-07,-6.647024669e-08,2.707737962e-07,2.062336233e-08];
+const CX=[344432.5704,9032.299901,-181.443078,0.07260157426,-11.36822908,-0.213442751,0.003003386249,0.003028109518,-0.01332543876,-0.001792886535];
+const CY=[264493.7643,147.6841949,11097.10011,4.628206674,0.1730840569,0.08884684143,0.001259988987,0.008782001979,-9.253472425e-05,-0.0008509053665];
+const poly=(k,u,v)=>k[0]+k[1]*u+k[2]*v+k[3]*u*u+k[4]*u*v+k[5]*v*v+k[6]*u*u*u+k[7]*u*u*v+k[8]*u*v*v+k[9]*v*v*v;
+const tmToLL=(x,y)=>{const a=(x-340000)/1e4,b=(y-265000)/1e4;return [poly(CLAT,a,b),poly(CLNG,a,b)];};
+const llToTM=(lat,lng)=>{const p=(lng-128.6)*10,q=(lat-35.87)*10;return [poly(CX,p,q),poly(CY,p,q)];};
+const t2lon=(x,n)=>x/n*360-180, t2lat=(y,n)=>Math.atan(Math.sinh(Math.PI*(1-2*y/n)))*180/Math.PI;
+const lon2t=(lon,n)=>(lon+180)/360*n, lat2t=(lat,n)=>{const r=lat*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n;};
+const TILE={cache:new Map(),ok:false};
+function tileImg(z,x,y,r){
+  const k=z+'/'+x+'/'+y+r;let im=TILE.cache.get(k);if(im)return im;
+  im=new Image();im.decoding='async';
+  im.onload=()=>{if(!TILE.ok){TILE.ok=true;const a=$('mapAttr');if(a)a.hidden=false;}req();};
+  im.src=`https://${'abcd'[(x+y)%4]}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}${r}.png`;
+  TILE.cache.set(k,im);
+  if(TILE.cache.size>500)TILE.cache.delete(TILE.cache.keys().next().value);
+  return im;
+}
+function drawTiles(c,W,H,dpr){
+  const lat0=tmToLL(V.cx,V.cy)[0];
+  let z=Math.round(Math.log2(156543.034*Math.cos(lat0*Math.PI/180)*V.sc));z=Math.max(7,Math.min(19,z));
+  const n=2**z,r=dpr>1.3?'@2x':'';
+  const cs=[[0,0],[W,0],[0,H],[W,H]].map(([px,py])=>tmToLL(V.cx+(px-W/2)/V.sc,V.cy-(py-H/2)/V.sc));
+  const la=cs.map(p=>p[0]),lo=cs.map(p=>p[1]);
+  const x0=Math.floor(lon2t(Math.min(...lo),n)),x1=Math.floor(lon2t(Math.max(...lo),n));
+  const y0=Math.floor(lat2t(Math.max(...la),n)),y1=Math.floor(lat2t(Math.min(...la),n));
+  if((x1-x0+1)*(y1-y0+1)>120)return;
+  const P=(lat,lng)=>{const [x,y]=llToTM(lat,lng);return [sx(x),sy(y)];};
+  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
+    const im=tileImg(z,tx,ty,r);if(!(im.complete&&im.naturalWidth))continue;
+    const [ax,ay]=P(t2lat(ty,n),t2lon(tx,n)),[bx,by]=P(t2lat(ty,n),t2lon(tx+1,n)),[cx2,cy2]=P(t2lat(ty+1,n),t2lon(tx,n));
+    c.setTransform(dpr*(bx-ax)/256,dpr*(by-ay)/256,dpr*(cx2-ax)/256,dpr*(cy2-ay)/256,dpr*ax,dpr*ay);
+    c.drawImage(im,0,0,im.naturalWidth,im.naturalHeight,-.3,-.3,256.6,256.6);
+  }
+  c.setTransform(dpr,0,0,dpr,0,0);
+}
 function paint(){
   const cv=$('cv'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
   if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);}
@@ -489,11 +530,12 @@ function paint(){
   c.fillStyle=cssv('--mapbg');c.fillRect(0,0,W,H);
   const R=LAST;
   if(!R||!V.ok){c.fillStyle=cssv('--muted');c.font='13px sans-serif';c.textAlign='center';c.fillText('좌표가 있는 가게를 고르면 지도가 표시됩니다',W/2,H/2);placePop();return;}
+  drawTiles(c,W,H,dpr);
   const s=R.sel,near=new Map((R.nb||[]).map((n,i)=>[n.d.id,i+1]));
   const hx=W/2/V.sc+20,hy=H/2/V.sc+20;
   const dot=V.sc>.6?3.2:V.sc>.15?2.4:1.6;
   // dots: closed first, open on top
-  for(const pass of [1,0]){
+  if(!TILE.ok||V.sc>=.12)for(const pass of [1,0]){
     c.fillStyle=pass?cssv('--closed'):cssv('--open');c.globalAlpha=pass?.5:.75;
     for(const d of DATA){
       if(d.x==null||d.closed!==!!pass||near.has(d.id)||d.id===s.id)continue;
@@ -506,7 +548,7 @@ function paint(){
   const halo=cssv('--mapbg'),lab=cssv('--maplabel');
   const text=(t,x,y,size,weight)=>{c.font=`${weight} ${size}px "IBM Plex Sans KR",sans-serif`;c.textAlign='center';c.textBaseline='middle';
     c.lineWidth=4;c.strokeStyle=halo;c.lineJoin='round';c.strokeText(t,x,y);c.fillStyle=lab;c.fillText(t,x,y);};
-  if(LABELS){
+  if(LABELS&&!TILE.ok){
     if(V.sc<.06)for(const l of LABELS.gu){const x=sx(l.x),y=sy(l.y);if(x>-50&&x<W+50&&y>-20&&y<H+20)text(l.t,x,y,15,700);}
     else if(V.sc>=.06){
       const placed=[];
@@ -551,7 +593,7 @@ function paint(){
 }
 function zoomAt(mx,my,f){
   if(!V.ok)return;const wx=V.cx+(mx-V.W/2)/V.sc,wy=V.cy-(my-V.H/2)/V.sc;
-  V.sc=Math.min(4,Math.max(.003,V.sc*f));V.cx=wx-(mx-V.W/2)/V.sc;V.cy=wy+(my-V.H/2)/V.sc;req();
+  V.sc=Math.min(4,Math.max(.006,V.sc*f));V.cx=wx-(mx-V.W/2)/V.sc;V.cy=wy+(my-V.H/2)/V.sc;req();
 }
 function pick(mx,my){
   let best=null,bd=16;
@@ -600,7 +642,7 @@ function placePop(){
   cv.addEventListener('dblclick',e=>zoomAt(e.offsetX,e.offsetY,2));
   $('zin').onclick=()=>zoomAt(V.W/2,V.H/2,1.6);$('zout').onclick=()=>zoomAt(V.W/2,V.H/2,1/1.6);
   $('zfit').onclick=()=>{fitView();req();};
-  $('zall').onclick=()=>{if(!V.ok)return;V.sc=Math.min(V.W,V.H)/62000;V.cx=342000;V.cy=274000;req();};
+  $('zall').onclick=()=>{if(!V.ok)return;V.sc=Math.max(.006,Math.min(V.W,V.H)/62000);V.cx=342000;V.cy=274000;req();};
 })();
 
 /* ---------- search ---------- */
