@@ -836,7 +836,7 @@ function startReady(){
 }
 
 /* ---------- 카카오맵 ---------- */
-const KAKAO_JS_KEY='d4841f91d2bf28d0a9fc905f84959147';
+const KAKAO_JS_KEY='628294cb4a9f3e0b32ea73661667bc86';
 const KK={on:false,map:null,ov:[],dots:[],info:null,circle:null};
 function kLL(d){const [la,lo]=tmToLL(d.x,d.y);return new kakao.maps.LatLng(la,lo);}
 function kEl(html,onClick){const w=document.createElement('div');w.innerHTML=html;const el=w.firstElementChild;if(onClick){el.style.cursor='pointer';el.addEventListener('click',e=>{e.stopPropagation();onClick();});}return el;}
