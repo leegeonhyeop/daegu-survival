@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style>
 html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
 
@@ -93,6 +95,44 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+#nmap{width:100%;height:460px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+@media (max-width:560px){#nmap{height:400px}}
+.nmsg,.nzoom{position:absolute;left:50%;transform:translateX(-50%);z-index:3;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.15);white-space:nowrap;pointer-events:none}
+.nmsg{top:50%}.nzoom{bottom:12px}
+.nm-pop{position:relative;width:240px}
+#nmap{z-index:0;font-family:var(--f-body);background:var(--mapbg)}
+.nm-icon{background:none;border:0}
+#nmap{background:#F2EFE9}
+.nm-normal{filter:saturate(.82) brightness(1.03) contrast(1.02)}
+.nm-pin{position:absolute;left:-14px;bottom:0;width:28px;height:38px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));cursor:pointer}
+.nm-pin svg{width:100%;height:100%;display:block}
+.nm-pin path{fill:#1FAF5E;stroke:#fff;stroke-width:1.5}
+.nm-pin circle{fill:#fff}
+.nm-lab{position:absolute;top:3px;left:0;transform:translateX(-50%);white-space:nowrap;font:700 13px/1.2 var(--f-body);color:#1a1a1a;
+  text-shadow:-1.5px 0 #fff,1.5px 0 #fff,0 -1.5px #fff,0 1.5px #fff,-1px -1px #fff,1px 1px #fff,-1px 1px #fff,1px -1px #fff;pointer-events:none}
+.nm-num{background:#FF6B3D!important;border-color:#fff!important}
+.nm-type{display:flex;background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.25);overflow:hidden}
+.nm-type button{border:0;border-radius:0;background:#fff;color:#555;font:600 12px var(--f-body);padding:7px 11px}
+.nm-type button+button{border-left:1px solid #e3e3e3}
+.nm-type button.on{color:#1FAF5E}
+.leaflet-touch .leaflet-bar,.leaflet-bar{border:0!important;box-shadow:0 1px 4px rgba(0,0,0,.25)!important;border-radius:6px!important;overflow:hidden}
+.leaflet-bar a{color:#444!important;width:34px!important;height:34px!important;line-height:34px!important}
+.nm-home{border:0!important;box-shadow:0 1px 4px rgba(0,0,0,.25);border-radius:6px!important}
+.leaflet-control-scale-line{border-color:#555;color:#333;background:rgba(255,255,255,.75)}
+.lp .leaflet-popup-content-wrapper{background:transparent;box-shadow:none;padding:0;border-radius:10px}
+.lp .leaflet-popup-content{margin:0;line-height:1.5;font-size:12.5px}
+.lp .leaflet-popup-tip-container{display:none}
+.nm-home{width:34px;height:34px;padding:0;border:2px solid rgba(0,0,0,.2);border-radius:4px;background:#fff;color:#333;display:flex;align-items:center;justify-content:center;background-clip:padding-box}
+.nm-home svg{width:16px;height:16px}
+.leaflet-container a.leaflet-popup-close-button{display:none}
+.leaflet-control-attribution{font-size:10px}
+.nm-num{width:22px;height:22px;border-radius:50%;background:var(--near);color:#fff;border:2px solid #fff;font:600 10px/18px var(--f-mono);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
+.nm-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);cursor:pointer}
+.nm-open{background:#4C82C2}.nm-closed{background:#A2A9B4}.nm-near{background:#FF6B3D}
+.nm-wrap{position:relative;width:0;height:0}
+.nm-sel{position:absolute;bottom:0;left:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.nm-sel span{background:#1F62A8;color:#fff;font:700 12.5px/1 var(--f-body);padding:6px 10px;border-radius:99px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.nm-sel i{width:0;height:0;border:7px solid transparent;border-top:9px solid #1F62A8;border-bottom:0}
 canvas{width:100%;height:460px;display:block;border-radius:8px;background:var(--mapbg);cursor:grab;touch-action:none;border:1px solid var(--line)}
 canvas.drag{cursor:grabbing}
 @media (max-width:560px){canvas{height:400px}}
@@ -181,8 +221,8 @@ tr:hover td{background:var(--accent-soft)}
       <section class="panel" id="result" aria-live="polite"></section>
       <section class="panel" aria-labelledby="h-map">
         <h2 id="h-map">위치</h2>
-        <div class="mapbox"><canvas id="cv" aria-label="선택 가게와 주변 폐업 점포 지도. 드래그로 이동, 휠로 확대"></canvas>
-          <div class="zoom">
+        <div class="mapbox"><div id="nmap" hidden></div><div class="nmsg" id="nmsg" hidden></div><div class="nzoom" id="nzoom" hidden>더 확대하면 주변 가게가 모두 보입니다</div><canvas id="cv" aria-label="선택 가게와 주변 폐업 점포 지도. 드래그로 이동, 휠로 확대"></canvas>
+          <div class="zoom" id="zoomCtl">
             <button type="button" id="zin" aria-label="확대">+</button>
             <button type="button" id="zout" aria-label="축소">−</button>
             <button type="button" id="zfit" aria-label="선택한 가게로 이동"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg></button>
@@ -190,12 +230,13 @@ tr:hover td{background:var(--accent-soft)}
           </div>
           <div class="pop" id="pop" hidden></div></div>
         <div class="legend">
-          <span><i style="background:var(--accent)"></i>선택한 가게</span>
-          <span><i style="background:var(--near)"></i>비교 대상 폐업 점포 k곳 (번호 = 가까운 순)</span>
+          <span><i style="background:#1FAF5E"></i>선택한 가게</span>
+          <span><i style="background:#FF6B3D"></i>비교 대상 폐업 점포 k곳 (번호 = 가까운 순)</span>
           <span><i style="background:var(--open)"></i>그 밖의 영업 점포</span>
           <span><i style="background:var(--closed)"></i>그 밖의 폐업 점포</span>
         </div>
-        <p class="hint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
+        <p class="hint" id="nstate"></p>
+        <p class="hint" id="mapHint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
       </section>
       <section class="panel" aria-labelledby="h-tbl">
         <h2 id="h-tbl">비교 대상 폐업 점포</h2>
@@ -222,6 +263,8 @@ const FIELDS=[
  {key:'type',label:'업태구분명',req:true,al:['업태구분명','uptaenm','bzstat_se_nm','bzstatsenm','업태']},
  {key:'x',label:'좌표 X',req:true,al:['좌표정보x(epsg5174)','좌표정보(x)','좌표정보x','crd_info_x','crdinfox','x']},
  {key:'y',label:'좌표 Y',req:true,al:['좌표정보y(epsg5174)','좌표정보(y)','좌표정보y','crd_info_y','crdinfoy','y']},
+ {key:'lat',label:'위도',req:false,al:['위도','lat','latitude']},
+ {key:'lng',label:'경도',req:false,al:['경도','lng','lon','longitude']},
  {key:'road',label:'도로명주소',req:false,al:['도로명전체주소','rdnwhladdr','road_nm_addr','roadnmaddr','도로명주소']},
  {key:'lot',label:'지번주소',req:false,al:['소재지전체주소','sitewhladdr','lotno_addr','lotnoaddr','지번주소','소재지주소']},
 ];
@@ -276,7 +319,7 @@ function convert(r,m){
   const x=parseFloat(r[m.x]),y=parseFloat(r[m.y]);
   return {id:++seq,name:String(r[m.name]||'(이름 없음)').trim(),type:String(r[m.type]||'').trim()||'미분류',
     gu:guOf(road)||guOf(lot),addr,closed,start,end:closed?end:null,
-    x:isFinite(x)&&x>0?x:null,y:isFinite(y)&&y>0?y:null,warn:false,get key(){return (this.name+' '+this.addr+' '+this.type).toLowerCase()}};
+    x:isFinite(x)&&x>0?x:null,y:isFinite(y)&&y>0?y:null,lat:m.lat&&+r[m.lat]>30?+r[m.lat]:null,lng:m.lng&&+r[m.lng]>120?+r[m.lng]:null,warn:false,get key(){return (this.name+' '+this.addr+' '+this.type).toLowerCase()}};
 }
 const years=s=>((s.closed?(s.end||NaN):REF)-s.start)/YEAR;
 
@@ -327,7 +370,7 @@ function load(){
   if(miss.length){showErr('다음 열을 지정해 주세요: '+miss.join(', '));return;}
   hideErr();seq=0;const out=[];
   if(pending.kind==='json'){
-    pending.rows.forEach(r=>{const c=convert(r,m);if(c){c.menu=menuOf(c.name);out.push(c);}});
+    pending.rows.forEach(r=>{const c=convert(r,m);if(c){c.menu=menuOf(c.name);out.push(fillLL(c));}});
     finishLoad(out,pending.files.map(f=>f.name).join(', '));return;
   }
   const files=pending.files,enc=pending.enc;let i=0;
@@ -336,7 +379,7 @@ function load(){
     if(i>=files.length){$('loadBtn').disabled=false;finishLoad(out,files.map(f=>f.name).join(', '));return;}
     const f=files[i++];let scanned=0;
     Papa.parse(f,{header:true,skipEmptyLines:true,encoding:enc,transformHeader:h=>h.replace(/^﻿/,'').trim(),
-      chunk:res=>{for(const r of res.data){scanned++;const c=convert(r,m);if(c){c.menu=menuOf(c.name);out.push(c);}}
+      chunk:res=>{for(const r of res.data){scanned++;const c=convert(r,m);if(c){c.menu=menuOf(c.name);out.push(fillLL(c));}}
         const p=Math.min(100,(res.meta.cursor/f.size)*100);$('prog').style.width=p+'%';
         $('progTxt').textContent=`${f.name} · ${scanned.toLocaleString()}행 확인 · 대구 ${out.length.toLocaleString()}곳`;},
       complete:next,error:e=>{$('loadBtn').disabled=false;showErr('읽는 중 오류: '+e.message);}});
@@ -362,18 +405,26 @@ const MENUS=[
  ['백반·한정식',/백반|한정식|기사식당|밥상|가정식|쌈밥|비빔밥|보리밥|정식/],
 ];
 function menuOf(name){const n=String(name||'');for(const [m,re] of MENUS)if(re.test(n))return m;return null;}
+/* ---------- TM(EPSG:5174) -> 위경도 근사 (대구 범위, 오차 1m 안팎) ---------- */
+function tm2ll(x,y){
+  if(!(x>0&&y>0))return [null,null];
+  const a=(x-340000)/1e4,b=(y-265000)/1e4;
+  return [35.87520365-0.001428089268*a+0.09009147094*b-5.097276981e-05*a*a-4.757518861e-06*a*b-6.887342637e-07*b*b,
+          128.5510266+0.1106941793*a+0.001754871*b-4.178476293e-06*a*a+0.000125292596*a*b+3.847075693e-06*b*b];
+}
+function fillLL(d){if(d.lat==null&&d.x!=null){const [la,lo]=tm2ll(d.x,d.y);d.lat=la;d.lng=lo;}return d;}
 /* ---------- bundled Daegu data ---------- */
 async function loadBundled(){
   $('result').innerHTML='<div class="empty">대구 일반음식점 97,575곳을 불러오는 중입니다…</div>';
   try{
-    const res=await fetch('daegu.json');if(!res.ok)throw new Error('HTTP '+res.status);
+    const res=await fetch('daegu.json?v=3',{cache:'no-cache'});if(!res.ok)throw new Error('HTTP '+res.status);
     const j=await res.json();const n=j.n.length,out=new Array(n);
     for(let i=0;i<n;i++){
       const gu=j.gus[j.g[i]],closed=j.e[i]>=0;
       out[i]={id:i+1,name:j.n[i]||'(이름 없음)',type:j.types[j.t[i]],gu,dong:j.dongs[j.d[i]],
         addr:'대구광역시 '+gu+' '+j.a[i],closed,start:j.s[i]*DAY,end:closed?j.e[i]*DAY:null,
-        x:j.x[i]||null,y:j.y[i]||null,warn:!!j.w[i]};
-      out[i].menu=menuOf(out[i].name);out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
+        x:j.x[i]||null,y:j.y[i]||null,lat:j.la&&j.la[i]?35+j.la[i]/1e6:null,lng:j.lo&&j.lo[i]?128+j.lo[i]/1e6:null,warn:!!j.w[i]};
+      fillLL(out[i]);out[i].menu=menuOf(out[i].name);out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
     }
     DATA=out;buildLabels();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
     selId=pickDefault();renderSrc(out.filter(d=>d.x!=null).length);runSearch();render();
@@ -479,7 +530,6 @@ function fitView(){
   V.cx=R.sel.x;V.cy=R.sel.y;V.sc=Math.min(V.W,V.H)/(2*rad);V.ok=true;
 }
 function req(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();});}
-const draw=req;
 const sx=x=>V.W/2+(x-V.cx)*V.sc, sy=y=>V.H/2-(y-V.cy)*V.sc;
 function paint(){
   const cv=$('cv'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
@@ -603,6 +653,99 @@ function placePop(){
   $('zall').onclick=()=>{if(!V.ok)return;V.sc=Math.min(V.W,V.H)/62000;V.cx=342000;V.cy=274000;req();};
 })();
 
+/* ---------- street map (Leaflet + CARTO tiles) ---------- */
+const NV={on:false,map:null,ov:[],dots:null,info:null,circle:null,tiles:null,dark:null};
+const draw=()=>{if(NV.on)nRender();else req();};
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':!!(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);};
+function nTiles(){
+  const type=NV.type||'normal';if(NV.tiles&&NV.dark===type)return;NV.dark=type;
+  if(NV.tiles)NV.tiles.forEach(t=>NV.map.removeLayer(t));
+  const osm='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+  NV.tiles=type==='sat'
+    ?[L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'&copy; Esri'}),
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:osm+' &copy; CARTO'})]
+    :[L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,className:'nm-normal',attribution:osm+' &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'})];
+  NV.tiles.forEach(t=>t.addTo(NV.map));
+  document.querySelectorAll('.nm-type button').forEach(b=>b.classList.toggle('on',b.dataset.t===type));
+}
+const ll=d=>[d.lat,d.lng];
+function nInfo(d){
+  const yr=years(d),R=LAST,rank=(R?.nb||[]).findIndex(n=>n.d.id===d.id);
+  const el=document.createElement('div');el.className='pop nm-pop';
+  el.innerHTML=`<button class="pop-x" type="button" aria-label="닫기">×</button>
+    <b>${esc(d.name)}</b>
+    <div class="pop-m">${esc(d.type)} · ${esc(d.gu||'')} ${esc(d.dong||'')}</div>
+    <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
+    ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
+    <div class="pop-a">${d.id!==selId?'<button class="primary" type="button" data-sel>이 가게로 비교</button>':''}
+      <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
+  el.querySelector('.pop-x').onclick=()=>NV.map.closePopup();
+  const b=el.querySelector('[data-sel]');if(b)b.onclick=()=>{NV.map.closePopup();selId=d.id;runSearch();render();};
+  L.popup({className:'lp',closeButton:false,offset:[0,d.id===selId?-40:-8],autoPanPadding:[20,20],maxWidth:260}).setLatLng(ll(d)).setContent(el).openOn(NV.map);
+}
+function nMarker(d,html,size,anchor,z){
+  const m=L.marker(ll(d),{icon:L.divIcon({html,className:'nm-icon',iconSize:size,iconAnchor:anchor}),zIndexOffset:z,keyboard:false,title:d.name}).addTo(NV.map);
+  m.on('click',()=>nInfo(d));NV.ov.push(m);
+}
+function nRender(){
+  if(!NV.map)return;NV.map.closePopup();NV.ov.forEach(m=>m.remove());NV.ov=[];
+  if(NV.circle){NV.circle.remove();NV.circle=null;}
+  const R=LAST;$('nmsg').hidden=true;if(!R){nDots();return;}
+  const s=R.sel;
+  if(s.lat==null){$('nmsg').textContent='이 가게는 위경도 정보가 없어 지도에 표시할 수 없습니다.';$('nmsg').hidden=false;nDots();return;}
+  if(R.radius)NV.circle=L.circle(ll(s),{radius:R.radius,color:'#FF6B3D',weight:2,dashArray:'6 5',fillColor:'#FF6B3D',fillOpacity:.08,interactive:false}).addTo(NV.map);
+  const numbered=(R.nb||[]).length<=60;
+  (R.nb||[]).forEach((n,i)=>{if(n.d.lat==null)return;
+    if(numbered)nMarker(n.d,`<div class="nm-num">${i+1}</div>`,[22,22],[11,11],500-i);
+    else nMarker(n.d,'<div class="nm-dot nm-near"></div>',[10,10],[5,5],300);});
+  const nm=s.name.length>14?s.name.slice(0,13)+'…':s.name;
+  nMarker(s,`<div class="nm-wrap"><div class="nm-pin"><svg viewBox="0 0 28 38" aria-hidden="true"><path d="M14 37C14 37 2 23.5 2 14a12 12 0 0 1 24 0c0 9.5-12 23-12 23z"/><circle cx="14" cy="14" r="5"/></svg></div><div class="nm-lab">${esc(nm)}</div></div>`,[0,0],[0,0],1000);
+  if(NV.circle)NV.map.fitBounds(NV.circle.getBounds(),{padding:[28,28],maxZoom:18});else NV.map.setView(ll(s),17);
+  nDots();
+}
+function nDots(){
+  if(!NV.map)return;NV.dots.clearLayers();
+  const z=NV.map.getZoom();$('nzoom').hidden=z>=15;if(z<15)return;
+  const b=NV.map.getBounds().pad(.1),R=LAST;
+  const skip=new Set([R?.sel?.id,...(R?.nb||[]).map(n=>n.d.id)]);
+  const cO=cssv('--open'),cC=cssv('--closed'),sf=cssv('--surface');let c=0;
+  for(const pass of [true,false])for(const d of DATA){
+    if(d.closed!==pass||d.lat==null||skip.has(d.id)||!b.contains([d.lat,d.lng]))continue;
+    L.circleMarker(ll(d),{renderer:NV.rend,radius:z>=17?5:4,color:sf,weight:1.2,fillColor:pass?cC:cO,fillOpacity:pass?.75:.95})
+      .on('click',()=>nInfo(d)).addTo(NV.dots);
+    if(++c>=3000)return;
+  }
+}
+function nFail(msg){
+  NV.on=false;$('nmap').hidden=true;$('cv').hidden=false;$('zoomCtl').hidden=false;
+  $('nstate').innerHTML=`<span class="chip closed">간단 지도</span> ${esc(msg)}`;req();
+}
+function nInit(){
+  if(!window.L){nFail('지도 라이브러리를 불러오지 못해 간단 지도로 표시합니다.');return;}
+  $('cv').hidden=true;$('zoomCtl').hidden=true;$('pop').hidden=true;$('nmap').hidden=false;
+  NV.map=L.map('nmap',{zoomControl:false,preferCanvas:false}).setView([35.8714,128.6014],13);
+  L.control.zoom({position:'topright',zoomInTitle:'확대',zoomOutTitle:'축소'}).addTo(NV.map);
+  L.control.scale({imperial:false,position:'bottomleft'}).addTo(NV.map);
+  const Home=L.Control.extend({onAdd(){const b=L.DomUtil.create('button','nm-home');b.type='button';b.title='선택한 가게로 이동';b.setAttribute('aria-label','선택한 가게로 이동');
+    b.innerHTML='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg>';
+    L.DomEvent.disableClickPropagation(b);b.onclick=()=>nRender();return b;}});
+  new Home({position:'topright'}).addTo(NV.map);
+  const Type=L.Control.extend({onAdd(){const w=L.DomUtil.create('div','nm-type');
+    w.innerHTML='<button type="button" data-t="normal" class="on">일반지도</button><button type="button" data-t="sat">위성지도</button>';
+    L.DomEvent.disableClickPropagation(w);w.querySelectorAll('button').forEach(b=>b.onclick=()=>{NV.type=b.dataset.t;nTiles();});return w;}});
+  new Type({position:'topleft'}).addTo(NV.map);
+  NV.rend=L.canvas({padding:.3});NV.dots=L.layerGroup().addTo(NV.map);
+  nTiles();
+  let t;NV.map.on('moveend',()=>{clearTimeout(t);t=setTimeout(nDots,80);});
+  NV.on=true;$('nstate').textContent='';
+  $('mapHint').textContent='드래그로 이동하고 휠·두 손가락으로 확대합니다. 더 확대하면 주변 가게가 모두 점으로 나오고, 점을 누르면 가게 정보가 나옵니다.';
+  const re=()=>{nRender();};
+  if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',re);
+  new MutationObserver(re).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  window.addEventListener('resize',()=>NV.map.invalidateSize());
+  if(LAST)nRender();
+}
+
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
@@ -638,11 +781,11 @@ function renderSrc(withXY){
     ?`<span class="chip">기본 데이터</span><span>${esc(SRC.label)} · 2026.10.28 수집 · 대구 ${DATA.length.toLocaleString()}곳 (영업 ${DATA.filter(d=>!d.closed).length.toLocaleString()} · 폐업 ${DATA.filter(d=>d.closed).length.toLocaleString()})</span>`
     :`<span class="chip">불러옴</span><span>${esc(SRC.label)} · 대구 ${DATA.length.toLocaleString()}곳 (좌표 있음 ${withXY.toLocaleString()})</span>`;
 }
-window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(draw,100);});
-if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',draw);
-new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(()=>{if(!NV.on)req();},100);});
+if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(!NV.on)req();});
+new MutationObserver(()=>{if(!NV.on)req();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
-loadBundled();
+loadBundled();nInit();
 })();
 </script>
 
