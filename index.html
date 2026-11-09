@@ -93,6 +93,27 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+.start{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 20px;display:flex;flex-direction:column;gap:12px;max-width:720px;width:100%;margin:0 auto;box-shadow:0 6px 24px rgba(20,40,70,.08)}
+.start h2{margin:0;font-size:20px;text-wrap:balance}
+.start>p{margin:0;color:var(--muted)}
+.start-box{display:flex;gap:8px}
+.start-box input{flex:1;min-width:0;font-size:16px;padding:11px 12px}
+.start-box button{padding:0 18px;font-size:15px}
+.start-sug{display:flex;flex-direction:column;gap:2px;max-height:340px;overflow:auto}
+.sug{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;text-align:left;border:0;border-radius:8px;padding:8px 10px;background:none}
+.sug b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sug small{grid-column:2;color:var(--muted)}
+.sug.on,.sug:hover{background:var(--accent-soft)}
+.sug-k{grid-row:span 2;align-self:center;font-size:11px;font-weight:700;padding:3px 7px;border-radius:99px;background:var(--line);color:var(--muted)}
+.sug-k.area{background:var(--near-soft);color:var(--near)}
+.sug-k.store{background:var(--accent-soft);color:var(--accent)}
+.start-ex{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.start-ex button{padding:4px 10px;border-radius:99px;font-size:12.5px}
+.start-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.start-foot button{border:0;background:none;color:var(--muted);text-decoration:underline;padding:4px}
+.startbar{margin-top:10px;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.startbar b{color:var(--ink)}
+.startbar button{padding:4px 10px;font-size:12.5px}
 .attr{position:absolute;right:6px;bottom:6px;font-size:10px;color:#333;background:rgba(255,255,255,.8);padding:1px 6px;border-radius:3px}
 .attr a{color:#333}
 .maptype{position:absolute;top:10px;left:10px;display:flex;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.25);overflow:hidden;z-index:2}
@@ -141,7 +162,26 @@ tr:hover td{background:var(--accent-soft)}
     <h1>대구 음식점 생존배수</h1>
     <p>가게를 고르고 k를 정하면, 가장 가까운 같은 업태 폐업 점포 k곳의 평균 영업 기간과 비교해 얼마나 오래 버텼는지 보여줍니다.</p>
     <div class="formula">생존배수 = 선택 점포 영업 기간 ÷ 주변 k개 폐업 점포의 평균 영업 기간</div>
+    <div class="startbar" id="startBar" hidden>시작 위치 <b id="startCur"></b> <button type="button" id="startChange">다른 가게·지역으로 바꾸기</button></div>
   </header>
+
+  <section class="start" id="start" aria-labelledby="h-start">
+    <h2 id="h-start">어떤 가게가 궁금하세요?</h2>
+    <p>가게 이름이나 동네(구·동)를 입력하면 그곳을 기준으로 시작합니다. 다음에 들어올 때도 이 위치로 열려요.</p>
+    <div class="start-box">
+      <input type="text" id="startQ" placeholder="예: 국밥대령, 수성구 범어동, 동인동" autocomplete="off" disabled aria-label="가게 이름 또는 지역">
+      <button type="button" class="primary" id="startGo">시작</button>
+    </div>
+    <div class="start-sug" id="startSug" role="listbox" aria-label="추천 결과"></div>
+    <div class="start-ex">
+      <span>예시</span>
+      <button type="button" class="ex" data-q="동성로">동성로</button>
+      <button type="button" class="ex" data-q="수성구 범어동">수성구 범어동</button>
+      <button type="button" class="ex" data-q="달서구 상인동">달서구 상인동</button>
+      <button type="button" class="ex" data-q="국밥대령">국밥대령</button>
+    </div>
+    <div class="start-foot"><p class="hint" id="startStatus">대구 음식점 데이터를 불러오는 중입니다…</p><button type="button" id="startSkip">건너뛰기</button></div>
+  </section>
 
   <div class="grid">
     <div class="rail">
@@ -388,10 +428,10 @@ async function loadBundled(){
       out[i]={id:i+1,name:j.n[i]||'(이름 없음)',type:j.types[j.t[i]],gu,dong:j.dongs[j.d[i]],
         addr:'대구광역시 '+gu+' '+j.a[i],closed,start:j.s[i]*DAY,end:closed?j.e[i]*DAY:null,
         x:j.x[i]||null,y:j.y[i]||null,warn:!!j.w[i]};
-      out[i].menu=menuOf(out[i].name);out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
+      out[i].menu=menuOf(out[i].name);out[i].key=(out[i].name+' '+out[i].addr+' '+(out[i].dong||'')+' '+out[i].type+' '+(out[i].menu||'')).toLowerCase();
     }
     DATA=out;buildLabels();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
-    selId=pickDefault();renderSrc(out.filter(d=>d.x!=null).length);runSearch();render();
+    selId=pickDefault();renderSrc(out.filter(d=>d.x!=null).length);startReady();runSearch();render();
   }catch(e){
     $('result').innerHTML='<p class="err">기본 데이터를 불러오지 못했습니다. 페이지를 새로고침하거나 CSV·JSON 파일을 직접 올려 주세요.</p>';
   }
@@ -678,11 +718,84 @@ function placePop(){
   $('zall').onclick=()=>{if(!V.ok)return;V.sc=Math.max(.006,Math.min(V.W,V.H)/62000);V.cx=342000;V.cy=274000;req();};
 })();
 
+/* ---------- 시작 화면: 가게·지역으로 기본값 정하기 ---------- */
+const START_KEY='daegu-survival-start';
+let AREAS=[];
+function buildAreas(){
+  const m=new Map();
+  for(const d of DATA){
+    if(d.x==null)continue;
+    for(const [label,kind] of [[d.gu,'구·군'],[d.gu&&d.dong?d.gu+' '+d.dong:'', '동']]){
+      if(!label)continue;let a=m.get(label);if(!a){a={label,kind,xs:[],ys:[],n:0};m.set(label,a);}a.xs.push(d.x);a.ys.push(d.y);a.n++;
+    }
+  }
+  const med=a=>{a.sort((p,q)=>p-q);return a[a.length>>1]};
+  AREAS=[...m.values()].filter(a=>a.n>=5).map(a=>({label:a.label,kind:a.kind,n:a.n,x:med(a.xs),y:med(a.ys)}));
+}
+const terms=q=>q.toLowerCase().split(/\s+/).filter(Boolean);
+function suggest(q){
+  const t=terms(q);if(!t.length)return [];
+  const areas=AREAS.filter(a=>t.every(w=>a.label.toLowerCase().includes(w))).sort((a,b)=>(a.kind===b.kind?b.n-a.n:a.kind==='구·군'?-1:1)).slice(0,4)
+    .map(a=>({kind:'area',label:a.label,sub:`${a.kind} · 음식점 ${a.n.toLocaleString()}곳`,a}));
+  const stores=[];
+  for(const d of DATA){if(t.every(w=>d.key.includes(w))){stores.push(d);if(stores.length>400)break;}}
+  stores.sort((a,b)=>(a.closed-b.closed)||(years(b)-years(a)));
+  return areas.concat(stores.slice(0,8).map(d=>({kind:'store',label:d.name,sub:`${d.type} · ${d.gu} ${d.dong||''}${d.closed?' · 폐업':''}`,d})));
+}
+function applyStart(item,save=true){
+  if(item.kind==='store'){selId=item.d.id;$('q').value='';}
+  else{
+    const a=item.a;let best=null,bd=Infinity;
+    for(const d of DATA){if(d.closed||d.x==null)continue;if(!terms(a.label).every(w=>d.key.includes(w)))continue;
+      const dd=Math.hypot(d.x-a.x,d.y-a.y);if(dd<bd){bd=dd;best=d;}}
+    if(best)selId=best.id;$('q').value=a.label;
+  }
+  if(save){try{localStorage.setItem(START_KEY,JSON.stringify(item.kind==='store'?{kind:'store',id:item.d.id,name:item.d.name}:{kind:'area',label:item.a.label}));}catch(e){}}
+  $('start').hidden=true;$('startBar').hidden=false;
+  $('startCur').textContent=item.kind==='store'?item.d.name:item.a.label+' (지역)';
+  runSearch();render();
+}
+function restoreStart(){
+  let v=null;try{v=JSON.parse(localStorage.getItem(START_KEY)||'null');}catch(e){}
+  if(!v)return false;
+  if(v.kind==='store'){const d=DATA.find(x=>x.id===v.id&&x.name===v.name);if(d){applyStart({kind:'store',d},false);return true;}}
+  if(v.kind==='area'){const a=AREAS.find(x=>x.label===v.label);if(a){applyStart({kind:'area',a},false);return true;}}
+  return false;
+}
+let SUG=[],SUGI=0;
+function showSug(){
+  const box=$('startSug');SUG=suggest($('startQ').value);SUGI=0;
+  if(!DATA.length){box.innerHTML='';return;}
+  if(!$('startQ').value.trim()){box.innerHTML='';return;}
+  box.innerHTML=SUG.length?SUG.map((s,i)=>`<button type="button" class="sug${i===0?' on':''}" data-i="${i}" role="option"><span class="sug-k ${s.kind}">${s.kind==='area'?'지역':'가게'}</span><b>${esc(s.label)}</b><small>${esc(s.sub)}</small></button>`).join('')
+    :'<p class="hint" style="padding:8px 4px">찾는 가게나 지역이 없습니다. 상호 일부나 동 이름으로 입력해 보세요.</p>';
+}
+function startInit(){
+  $('startQ').addEventListener('input',showSug);
+  $('startQ').addEventListener('keydown',e=>{
+    const items=[...document.querySelectorAll('#startSug .sug')];
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!items.length)return;SUGI=(SUGI+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;items.forEach((b,i)=>b.classList.toggle('on',i===SUGI));}
+    if(e.key==='Enter'){e.preventDefault();if(SUG[SUGI])applyStart(SUG[SUGI]);}
+  });
+  $('startSug').addEventListener('click',e=>{const b=e.target.closest('.sug');if(b)applyStart(SUG[+b.dataset.i]);});
+  $('startGo').addEventListener('click',()=>{if(SUG[SUGI])applyStart(SUG[SUGI]);else showSug();});
+  document.querySelectorAll('#start .ex').forEach(b=>b.addEventListener('click',()=>{$('startQ').value=b.dataset.q;showSug();$('startQ').focus();}));
+  $('startChange').addEventListener('click',()=>{$('start').hidden=false;$('startBar').hidden=true;$('startQ').value='';showSug();$('startQ').focus();window.scrollTo({top:0,behavior:'smooth'});});
+  $('startSkip').addEventListener('click',()=>{$('start').hidden=true;$('startBar').hidden=false;$('startCur').textContent='예시 가게';});
+}
+function startReady(){
+  buildAreas();
+  $('startStatus').textContent=`대구 음식점 ${DATA.length.toLocaleString()}곳에서 찾을 수 있어요.`;
+  $('startQ').disabled=false;
+  if(!restoreStart()){$('start').hidden=false;$('startBar').hidden=true;}
+  if($('startQ').value)showSug();
+}
+
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
   let rows=DATA;
-  if(q)rows=DATA.filter(d=>d.key.includes(q));
+  if(q){const t=q.split(/\s+/).filter(Boolean);rows=DATA.filter(d=>t.every(w=>d.key.includes(w)));}
   const total=rows.length;rows=rows.slice(0,60);
   const sel=DATA.find(d=>d.id===selId);
   if(sel&&!rows.includes(sel)&&!q)rows=[sel,...rows.slice(0,59)];
@@ -717,7 +830,7 @@ window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTim
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',draw);
 new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
-loadBundled();
+startInit();loadBundled();
 })();
 </script>
 
