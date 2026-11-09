@@ -348,7 +348,7 @@ function load(){
   if(miss.length){showErr('다음 열을 지정해 주세요: '+miss.join(', '));return;}
   hideErr();seq=0;const out=[];
   if(pending.kind==='json'){
-    pending.rows.forEach(r=>{const c=convert(r,m);if(c)out.push(c);});
+    pending.rows.forEach(r=>{const c=convert(r,m);if(c)out.push(fillLL(c));});
     finishLoad(out,pending.files.map(f=>f.name).join(', '));return;
   }
   const files=pending.files,enc=pending.enc;let i=0;
@@ -357,7 +357,7 @@ function load(){
     if(i>=files.length){$('loadBtn').disabled=false;finishLoad(out,files.map(f=>f.name).join(', '));return;}
     const f=files[i++];let scanned=0;
     Papa.parse(f,{header:true,skipEmptyLines:true,encoding:enc,transformHeader:h=>h.replace(/^﻿/,'').trim(),
-      chunk:res=>{for(const r of res.data){scanned++;const c=convert(r,m);if(c)out.push(c);}
+      chunk:res=>{for(const r of res.data){scanned++;const c=convert(r,m);if(c)out.push(fillLL(c));}
         const p=Math.min(100,(res.meta.cursor/f.size)*100);$('prog').style.width=p+'%';
         $('progTxt').textContent=`${f.name} · ${scanned.toLocaleString()}행 확인 · 대구 ${out.length.toLocaleString()}곳`;},
       complete:next,error:e=>{$('loadBtn').disabled=false;showErr('읽는 중 오류: '+e.message);}});
@@ -365,18 +365,26 @@ function load(){
   next();
 }
 
+/* ---------- TM(EPSG:5174) -> 위경도 근사 (대구 범위, 오차 1m 안팎) ---------- */
+function tm2ll(x,y){
+  if(!(x>0&&y>0))return [null,null];
+  const a=(x-340000)/1e4,b=(y-265000)/1e4;
+  return [35.87520365-0.001428089268*a+0.09009147094*b-5.097276981e-05*a*a-4.757518861e-06*a*b-6.887342637e-07*b*b,
+          128.5510266+0.1106941793*a+0.001754871*b-4.178476293e-06*a*a+0.000125292596*a*b+3.847075693e-06*b*b];
+}
+function fillLL(d){if(d.lat==null&&d.x!=null){const [la,lo]=tm2ll(d.x,d.y);d.lat=la;d.lng=lo;}return d;}
 /* ---------- bundled Daegu data ---------- */
 async function loadBundled(){
   $('result').innerHTML='<div class="empty">대구 일반음식점 97,575곳을 불러오는 중입니다…</div>';
   try{
-    const res=await fetch('daegu.json');if(!res.ok)throw new Error('HTTP '+res.status);
+    const res=await fetch('daegu.json?v=3',{cache:'no-cache'});if(!res.ok)throw new Error('HTTP '+res.status);
     const j=await res.json();const n=j.n.length,out=new Array(n);
     for(let i=0;i<n;i++){
       const gu=j.gus[j.g[i]],closed=j.e[i]>=0;
       out[i]={id:i+1,name:j.n[i]||'(이름 없음)',type:j.types[j.t[i]],gu,dong:j.dongs[j.d[i]],
         addr:'대구광역시 '+gu+' '+j.a[i],closed,start:j.s[i]*DAY,end:closed?j.e[i]*DAY:null,
         x:j.x[i]||null,y:j.y[i]||null,lat:j.la&&j.la[i]?35+j.la[i]/1e6:null,lng:j.lo&&j.lo[i]?128+j.lo[i]/1e6:null,warn:!!j.w[i]};
-      out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
+      fillLL(out[i]);out[i].key=(out[i].name+' '+out[i].addr+' '+out[i].type).toLowerCase();
     }
     DATA=out;buildLabels();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
     selId=pickDefault();renderSrc(out.filter(d=>d.x!=null).length);runSearch();render();
