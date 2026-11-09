@@ -191,7 +191,7 @@ tr:hover td{background:var(--accent-soft)}
             <button type="button" id="zall" aria-label="대구 전체 보기"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3"/></svg></button>
           </div>
           <div class="pop" id="pop" hidden></div>
-          <div class="attr" id="mapAttr" hidden>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a></div></div>
+          <div class="attr" id="mapAttr" hidden>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자</div></div>
         <div class="legend">
           <span><i style="background:var(--accent)"></i>선택한 가게</span>
           <span><i style="background:var(--near)"></i>비교 대상 폐업 점포 k곳 (번호 = 가까운 순)</span>
@@ -499,7 +499,7 @@ function tileImg(z,x,y,r){
   const k=z+'/'+x+'/'+y+r;let im=TILE.cache.get(k);if(im)return im;
   im=new Image();im.decoding='async';
   im.onload=()=>{if(!TILE.ok){TILE.ok=true;const a=$('mapAttr');if(a)a.hidden=false;}req();};
-  im.src=`https://${'abcd'[(x+y)%4]}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}${r}.png`;
+  im.src=`https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
   TILE.cache.set(k,im);
   if(TILE.cache.size>500)TILE.cache.delete(TILE.cache.keys().next().value);
   return im;
@@ -507,7 +507,7 @@ function tileImg(z,x,y,r){
 function drawTiles(c,W,H,dpr){
   const lat0=tmToLL(V.cx,V.cy)[0];
   let z=Math.round(Math.log2(156543.034*Math.cos(lat0*Math.PI/180)*V.sc));z=Math.max(7,Math.min(19,z));
-  const n=2**z,r=dpr>1.3?'@2x':'';
+  const n=2**z,r='';
   const cs=[[0,0],[W,0],[0,H],[W,H]].map(([px,py])=>tmToLL(V.cx+(px-W/2)/V.sc,V.cy-(py-H/2)/V.sc));
   const la=cs.map(p=>p[0]),lo=cs.map(p=>p[1]);
   const x0=Math.floor(lon2t(Math.min(...lo),n)),x1=Math.floor(lon2t(Math.max(...lo),n));
