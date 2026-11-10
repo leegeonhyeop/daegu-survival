@@ -95,6 +95,18 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+.k-sw{width:12px;height:26px;display:block;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45))}
+.k-sw svg{width:100%;height:100%;display:block;overflow:visible}
+.k-sw .bl{fill:#EEF1F4;stroke:#5B6470;stroke-width:.7}
+.k-sw .fu{stroke:#AEB6C0;stroke-width:.6}
+.k-sw .hl{fill:currentColor;stroke:#fff;stroke-width:.7;paint-order:stroke}
+.sw-open{color:#16A34A}
+.sw-closed{color:#E11D48}
+.sw-fr{color:#7C3AED}
+.sw-c{opacity:.7}
+.sw-c .bl{fill:#F3D6DC}
+.k-sw:hover{transform:scale(1.25);opacity:1}
+.lg-sw{display:inline-block;width:8px;height:18px;margin-right:6px;vertical-align:middle;filter:none}
 .maplinks{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px}
 .ml-k{color:var(--muted);margin-right:2px}
 .ml{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--ink)!important;text-decoration:none;font-weight:600;line-height:1.3}
@@ -282,9 +294,9 @@ tr:hover td{background:var(--accent-soft)}
         <div class="legend">
           <span><i style="background:var(--accent)"></i>선택한 가게</span>
           <span><i style="background:var(--near)"></i>비교 대상 폐업 점포 k곳 (번호 = 가까운 순)</span>
-          <label class="lg-tg"><input type="checkbox" id="showOpen" checked><i class="lg-open"></i>영업 중인 가게</label>
-          <label class="lg-tg"><input type="checkbox" id="showClosed" checked><i class="lg-closed"></i>폐업한 가게</label>
-          <label class="lg-tg"><input type="checkbox" id="showFr" checked><i class="lg-fr"></i>프랜차이즈 (빈 마름모 = 폐업)</label>
+          <label class="lg-tg"><input type="checkbox" id="showOpen" checked><span class="k-sw sw-open lg-sw"><svg viewBox="0 0 12 26" aria-hidden="true"><path class="bl" d="M6 .6 8.2 4v11H3.8V4z"/><path class="fu" d="M6 4.5v10"/><rect class="hl" x=".8" y="14.6" width="10.4" height="2.4" rx="1.2"/><rect class="hl" x="4.9" y="17" width="2.2" height="5.4" rx=".6"/><circle class="hl" cx="6" cy="23.6" r="1.8"/></svg></span>영업 중인 가게</label>
+          <label class="lg-tg"><input type="checkbox" id="showClosed" checked><span class="k-sw sw-closed sw-c lg-sw"><svg viewBox="0 0 12 26" aria-hidden="true"><path class="bl" d="M6 .6 8.2 4v11H3.8V4z"/><path class="fu" d="M6 4.5v10"/><rect class="hl" x=".8" y="14.6" width="10.4" height="2.4" rx="1.2"/><rect class="hl" x="4.9" y="17" width="2.2" height="5.4" rx=".6"/><circle class="hl" cx="6" cy="23.6" r="1.8"/></svg></span>폐업한 가게</label>
+          <label class="lg-tg"><input type="checkbox" id="showFr" checked><span class="k-sw sw-fr lg-sw"><svg viewBox="0 0 12 26" aria-hidden="true"><path class="bl" d="M6 .6 8.2 4v11H3.8V4z"/><path class="fu" d="M6 4.5v10"/><rect class="hl" x=".8" y="14.6" width="10.4" height="2.4" rx="1.2"/><rect class="hl" x="4.9" y="17" width="2.2" height="5.4" rx=".6"/><circle class="hl" cx="6" cy="23.6" r="1.8"/></svg></span>프랜차이즈 (흐린 검 = 폐업)</label>
         </div>
         <p class="hint" id="mapHint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
       </section>
@@ -870,6 +882,7 @@ function startReady(){
 }
 
 /* ---------- 카카오맵 ---------- */
+const SWORD='<svg viewBox="0 0 12 26" aria-hidden="true"><path class="bl" d="M6 .6 8.2 4v11H3.8V4z"/><path class="fu" d="M6 4.5v10"/><rect class="hl" x=".8" y="14.6" width="10.4" height="2.4" rx="1.2"/><rect class="hl" x="4.9" y="17" width="2.2" height="5.4" rx=".6"/><circle class="hl" cx="6" cy="23.6" r="1.8"/></svg>';
 const KAKAO_JS_KEY='628294cb4a9f3e0b32ea73661667bc86';
 const KK={on:false,map:null,ov:[],dots:[],info:null,circle:null};
 function kLL(d){const [la,lo]=tmToLL(d.x,d.y);return new kakao.maps.LatLng(la,lo);}
@@ -927,8 +940,8 @@ function kDots(){
   for(const d of DATA){
     if(d.x==null||skip.has(d.id)||d.x<x0||d.x>x1||d.y<y0||d.y>y1)continue;
     if(d.fr?!sF:(d.closed?!sC:!sO))continue;
-    const cls=d.fr?(d.closed?'k-fr k-fr-c':'k-fr'):(d.closed?'k-closed':'k-open');
-    kAdd(KK.dots,d,`<div class="k-dot ${cls}" title="${esc(d.name)}"></div>`,.5,d.closed?1:2,()=>kInfo(d));
+    const cls=d.fr?(d.closed?'sw-fr sw-c':'sw-fr'):(d.closed?'sw-closed sw-c':'sw-open');
+    kAdd(KK.dots,d,`<div class="k-sw ${cls}" title="${esc(d.name)}${d.closed?' (폐업)':''}">${SWORD}</div>`,.5,d.closed?1:2,()=>kInfo(d));
     if(++c>=600)break;
   }
 }
