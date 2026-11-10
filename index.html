@@ -95,25 +95,6 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
-.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{flex:1;border:0;border-radius:0;background:var(--surface);color:var(--muted);font-size:12.5px;padding:7px 6px}
-.seg button+button{border-left:1px solid var(--line)}
-.seg button.on{background:var(--accent);color:#fff;font-weight:600}
-.rank{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
-.rank li+li{border-top:1px solid var(--line)}
-.rk{width:100%;display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;text-align:left;border:0;border-radius:0;background:none;padding:8px 10px;color:var(--ink)}
-.rk:hover{background:var(--accent-soft)}
-.rk.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
-.rk-n{font-family:var(--f-mono);font-weight:600;font-size:13px;color:var(--muted);text-align:center}
-.rank li:nth-child(1) .rk-n{color:#fff;background:#C9A227;border-radius:99px}
-.rank li:nth-child(2) .rk-n{color:#fff;background:#8E99A8;border-radius:99px}
-.rank li:nth-child(3) .rk-n{color:#fff;background:#B0703A;border-radius:99px}
-.rk-m{min-width:0;display:flex;flex-direction:column}
-.rk-m b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rk-m small{color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rk-w{font-style:normal;font-size:10.5px;font-weight:700;color:var(--warn);border:1px solid currentColor;border-radius:4px;padding:0 3px;margin-left:3px;vertical-align:1px}
-.rk-v{font-family:var(--f-mono);font-weight:600;font-size:14px;color:var(--good);font-variant-numeric:tabular-nums}
-.rk-v small{font-family:var(--f-body);font-size:11px;margin-left:1px}
 .pix{image-rendering:pixelated;image-rendering:crisp-edges;display:block;background:none!important;border:0!important;border-radius:0!important;cursor:default!important;touch-action:auto!important;max-width:none}
 .brand{display:flex;align-items:center;gap:12px}
 .start-turtle{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
@@ -291,13 +272,6 @@ tr:hover td{background:var(--accent-soft)}
           <label><input type="checkbox" id="sameGu"> 같은 구·군 안에서만 찾기</label>
         </div>
       </section>
-
-      <section class="panel" aria-labelledby="h-rank">
-        <h2 id="h-rank">생존배수 순위</h2>
-        <div class="seg" id="rankScope" role="group" aria-label="순위 범위"><button type="button" data-r="all" class="on" aria-pressed="true">대구 전체</button><button type="button" data-r="gu" aria-pressed="false">선택한 가게의 구·군</button></div>
-        <ol class="rank" id="rank"></ol>
-        <p class="hint" id="rankHint">데이터를 불러오면 순위를 계산합니다.</p>
-      </section>
     </div>
 
     <div class="main">
@@ -338,7 +312,6 @@ tr:hover td{background:var(--accent-soft)}
 
 <script>
 (function(){
-const MIN_LIFE_YR=30/365.25; /* 30일 미만 폐업 = 행사용 임시 영업으로 보고 비교에서 뺌 */
 const DAY=86400000, YEAR=365.25*DAY, SNAP=Date.UTC(2026,9,28);
 let REF=SNAP, REFLABEL='2026.10.28';
 const $=id=>document.getElementById(id);
@@ -550,7 +523,7 @@ function compute(){
     if(basis==='type'&&d.type!==sel.type)continue;
     if(basis==='menu'&&d.menu!==sel.menu)continue;
     if(sameGu&&d.gu!==sel.gu)continue;
-    const yr=(d.end-d.start)/YEAR;if(!(yr>=MIN_LIFE_YR))continue;
+    const yr=(d.end-d.start)/YEAR;if(!(yr>=0))continue;
     cand.push({d,yr,dist:Math.hypot(d.x-sel.x,d.y-sel.y)});
   }
   cand.sort((a,b)=>a.dist-b.dist);
@@ -606,7 +579,6 @@ function render(){
    ${s.warn?'<p class="hint" style="color:var(--warn)">지위승계 이력이 있어 상호나 업종이 중간에 바뀌었을 수 있습니다. 영업 기간은 최초 인허가일 기준입니다.</p>':''}
    ${!s.closed?`<p class="hint">영업 중인 가게는 데이터 기준일(${REFLABEL})까지의 기간으로 계산하므로, 계속 영업할수록 배수가 올라갑니다.</p>`:''}`;
   if($('sceneCv'))sceneRun($('sceneCv'),$('sceneMsg'),R.ratio);
-  if(typeof rankRender==='function')rankRender();
   tbl.innerHTML=`<table><thead><tr><th>#</th><th>사업장명</th><th>업태</th><th>메뉴(추정)</th><th>구·군</th><th style="text-align:right">거리</th><th style="text-align:right">영업 기간</th><th>개업 ~ 폐업</th></tr></thead><tbody>${
     R.nb.map((n,i)=>`<tr><td class="n">${i+1}</td><td>${esc(n.d.name)}</td><td>${esc(n.d.type)}</td><td>${esc(n.d.menu||'–')}</td><td>${esc(n.d.gu||'–')}</td><td class="n">${fm(n.dist)}</td><td class="n">${n.yr.toFixed(1)}년</td><td>${fd(n.d.start)} ~ ${fd(n.d.end)}</td></tr>`).join('')}</tbody></table>`;
   draw();
@@ -904,7 +876,6 @@ function startInit(){
   $('startSkip').addEventListener('click',()=>{$('start').hidden=true;$('startBar').hidden=false;$('startCur').textContent='예시 가게';});
 }
 function startReady(){
-  setTimeout(rankCompute,200);
   turtleState($('startTurtle'),'idle');$('turtleMsg').textContent='가게나 동네를 입력해 보세요';
   buildAreas();
   $('startStatus').textContent=`대구 음식점 ${DATA.length.toLocaleString()}곳에서 찾을 수 있어요.`;
@@ -1142,55 +1113,6 @@ function setTurtleFavicon(){
     let l=document.querySelector('link[rel="icon"]');if(!l){l=document.createElement('link');l.rel='icon';document.head.appendChild(l);}l.href=c.toDataURL('image/png');}catch(e){}
 }
 
-/* ---------- 생존배수 순위 (영업 중인 모든 가게, 지금 비교 설정 기준) ---------- */
-const RANK={list:null,job:0,scope:'all'};
-function rankCompute(){
-  const job=++RANK.job;RANK.list=null;rankRender();
-  const k=+$('k').value,mode=$('cmpMode').value,sameGu=$('sameGu').checked,CELL=500;
-  const groups=new Map();
-  const gk=(basis,d)=>basis==='all'?'*':basis==='type'?'t|'+d.type:'m|'+d.menu;
-  const add=(key,d,yr)=>{let g=groups.get(key);if(!g){g=new Map();groups.set(key,g);}const c=Math.floor(d.x/CELL)+','+Math.floor(d.y/CELL);let a=g.get(c);if(!a){a=[];g.set(c,a);}a.push([d,yr]);};
-  for(const d of DATA){
-    if(!d.closed||d.x==null||!d.end)continue;const yr=(d.end-d.start)/YEAR;if(!(yr>=MIN_LIFE_YR))continue;
-    if(mode==='all')add('*',d,yr);else{add('t|'+d.type,d,yr);if(mode==='menu'&&d.menu)add('m|'+d.menu,d,yr);}
-  }
-  const open=DATA.filter(d=>!d.closed&&d.x!=null&&isFinite(years(d)));
-  const out=[];let i=0;
-  function knn(s){
-    const basis=mode==='menu'&&!s.menu?'type':mode;if(basis==='type'&&s.type==='기타')return null;const g=groups.get(gk(basis,s));if(!g)return null;
-    const cx=Math.floor(s.x/CELL),cy=Math.floor(s.y/CELL);let found=[];
-    for(let r=0;r<=70;r++){
-      for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;const a=g.get((cx+dx)+','+(cy+dy));if(!a)continue;
-        for(const [d,yr] of a){if(sameGu&&d.gu!==s.gu)continue;found.push([Math.hypot(d.x-s.x,d.y-s.y),yr]);}}
-      if(found.length>=k){found.sort((p,q)=>p[0]-q[0]);if(found[k-1][0]<=r*CELL)break;}
-    }
-    if(found.length<k)return null;
-    found.sort((p,q)=>p[0]-q[0]);let sum=0;for(let j=0;j<k;j++)sum+=found[j][1];return sum/k;
-  }
-  function step(){
-    if(job!==RANK.job)return;
-    const end=Math.min(open.length,i+1500);
-    for(;i<end;i++){const s=open[i],avg=knn(s);if(avg>0)out.push({d:s,own:years(s),ratio:years(s)/avg});}
-    $('rankHint').textContent=`계산 중… ${Math.round(i/open.length*100)}%`;
-    if(i<open.length){setTimeout(step,0);return;}
-    out.sort((a,b)=>b.ratio-a.ratio);RANK.list=out;rankRender();
-  }
-  setTimeout(step,30);
-}
-function rankRender(){
-  const ol=$('rank');if(!ol)return;
-  document.querySelectorAll('#rankScope button').forEach(b=>{const on=b.dataset.r===RANK.scope;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
-  if(!RANK.list){ol.innerHTML='';return;}
-  const sel=DATA.find(d=>d.id===selId);
-  let L=RANK.list;if(RANK.scope==='gu'&&sel)L=L.filter(r=>r.d.gu===sel.gu);
-  const top=L.slice(0,50);
-  ol.innerHTML=top.map((r,i)=>`<li><button type="button" class="rk${r.d.id===selId?' sel':''}" data-id="${r.d.id}">
-    <span class="rk-n">${i+1}</span><span class="rk-m"><b>${esc(r.d.name)}${r.d.warn?' <i class="rk-w" title="지위승계 이력: 상호·업종이 바뀌었을 수 있음">승계</i>':''}</b><small>${esc(r.d.menu||r.d.type)} · ${esc(r.d.gu)} ${esc(r.d.dong||'')} · ${r.own.toFixed(1)}년</small></span>
-    <span class="rk-v">${r.ratio.toFixed(2)}<small>배</small></span></button></li>`).join('')||'<li class="hint" style="padding:10px">조건에 맞는 가게가 없습니다.</li>';
-  const mode=$('cmpMode').value;
-  $('rankHint').textContent=`${RANK.scope==='gu'&&sel?sel.gu+' ':'대구 '}영업 중인 가게 ${L.length.toLocaleString()}곳 중 상위 ${top.length}곳 · 기준: ${mode==='menu'?'같은 메뉴':mode==='type'?'같은 업태':'모든 음식점'}, k=${$('k').value}${$('sameGu').checked?', 같은 구·군':''}. 비교할 폐업 점포가 k곳에 못 미치는 가게는 뺐습니다. 30일 안에 폐업한 행사용 임시 영업은 비교 대상에서 빼고, 메뉴를 알 수 없는 업태 '기타' 가게(백화점 팝업 등 단기 매장이 많음)는 순위에서 뺐습니다. '승계' 표시는 사장이나 상호가 바뀌었을 수 있는 가게입니다.`;
-}
-
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
@@ -1216,11 +1138,7 @@ $('list').addEventListener('keydown',e=>{if(e.key==='Enter'){const it=e.target.c
 let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(runSearch,150);});
 
 /* ---------- controls ---------- */
-let rankT;const rankSoon=()=>{clearTimeout(rankT);rankT=setTimeout(rankCompute,350);};
-$('k').addEventListener('input',()=>{$('kNum').textContent=$('k').value;render();rankSoon();});
-$('cmpMode').addEventListener('change',rankSoon);$('sameGu').addEventListener('change',rankSoon);
-document.querySelectorAll('#rankScope button').forEach(b=>b.addEventListener('click',()=>{RANK.scope=b.dataset.r;rankRender();}));
-$('rank').addEventListener('click',e=>{const b=e.target.closest('.rk');if(!b)return;selId=+b.dataset.id;runSearch();render();});
+$('k').addEventListener('input',()=>{$('kNum').textContent=$('k').value;render();});
 $('cmpMode').addEventListener('change',render);$('showOpen').addEventListener('change',()=>req());$('showFr').addEventListener('change',()=>req());document.querySelectorAll('#mapType button').forEach(b=>b.addEventListener('click',()=>setMapType(b.dataset.t)));$('showClosed').addEventListener('change',()=>req());$('sameGu').addEventListener('change',render);
 $('pickBtn').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change',e=>{onFiles(e.target.files);e.target.value='';});
