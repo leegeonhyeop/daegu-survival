@@ -96,6 +96,18 @@ button:disabled{opacity:.5;cursor:default}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
 .bigrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.subrow{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-top:2px}
+.gv{flex:none}
+.pctbar{flex:1;min-width:270px;display:flex;flex-direction:column;gap:6px;padding-bottom:2px;--pc:var(--accent)}
+.pctbar.top{--pc:var(--good)}.pctbar.low{--pc:var(--muted)}
+.pb-row{display:grid;grid-template-columns:44px 1fr 74px;gap:8px;align-items:center;font-size:12px}
+.pb-l{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pb-t{position:relative;height:8px;border-radius:99px;background:var(--line)}
+.pb-t i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:color-mix(in srgb,var(--pc) 35%,transparent)}
+.pb-t b{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--pc);border:2px solid var(--surface);transform:translate(-50%,-50%);box-shadow:0 0 0 1px var(--pc)}
+.pb-v{font-family:var(--f-mono);font-weight:600;color:var(--pc);text-align:right;white-space:nowrap}
+.pb-ax{display:grid;grid-template-columns:44px 1fr 74px;font-size:10.5px;color:var(--muted)}
+.pb-ax{gap:8px}.pb-axt{display:flex;justify-content:space-between}
 .pct{display:flex;flex-direction:column;gap:1px;padding:6px 10px;border-radius:10px;background:var(--accent-soft);color:var(--accent);line-height:1.3}
 .pct b{font-size:15px;font-weight:700;white-space:nowrap}
 .pct small{font-size:11.5px;color:var(--muted);white-space:nowrap}
@@ -588,8 +600,9 @@ function render(){
    <div class="score">
      <div class="score-left"><canvas id="swordCv" class="pix" role="img" aria-label="생존배수 ${R.ratio.toFixed(2)}배 · ${SWORD_STOPS[swordGrade(R.ratio)][1]}"></canvas>
        <div><div class="bigrow"><div class="big" style="color:${vc}">${R.ratio.toFixed(2)}<small>배</small></div><div class="pct" id="pctChip" aria-live="polite"><b>순위 계산 중…</b></div></div>
-       <span class="sword-grade">${SWORD_STOPS[swordGrade(R.ratio)][1]}</span>
-       <span class="verdict" style="color:${vc};background:color-mix(in srgb, ${vc} 14%, transparent)">${vt}</span></div></div>
+       <div class="subrow"><div class="gv"><span class="sword-grade">${SWORD_STOPS[swordGrade(R.ratio)][1]}</span>
+       <span class="verdict" style="color:${vc};background:color-mix(in srgb, ${vc} 14%, transparent)">${vt}</span></div>
+       <div class="pctbar" id="pctBar" aria-hidden="true"></div></div></div></div>
      <div style="min-width:0">${head}
        <div class="calc">${R.own.toFixed(1)}년 (${fd(s.start)} ~ ${s.closed?fd(s.end):REFLABEL}) ÷ ${R.avg.toFixed(1)}년 = ${R.ratio.toFixed(2)}</div></div>
    </div>
@@ -1126,6 +1139,10 @@ function pctUpdate(){
   const G=L.filter(r=>r.d.gu===R.sel.gu),ga=G.filter(r=>r.ratio>R.ratio+1e-9).length,gp=G.length?Math.max(0.1,(ga+1)/G.length*100):null;
   const tone=pct<=10?'top':pct<=50?'mid':'low';
   el.className='pct '+tone;
+  const bar=$('pctBar');
+  if(bar){const row=(lab,p)=>`<div class="pb-row"><span class="pb-l">${lab}</span><div class="pb-t"><i style="width:${Math.min(100,p)}%"></i><b style="left:${Math.min(100,p)}%"></b></div><span class="pb-v">상위 ${fmt(p)}%</span></div>`;
+    bar.className='pctbar '+tone;
+    bar.innerHTML=row('대구',pct)+(gp!=null?row(esc(R.sel.gu),gp):'')+'<div class="pb-ax"><span></span><span class="pb-axt"><span>상위 1%</span><span>50%</span><span>100%</span></span><span></span></div>';}
   el.innerHTML=`<b>대구 상위 ${fmt(pct)}%</b><small>${N.toLocaleString()}곳 중 ${rank.toLocaleString()}위</small>${gp!=null?`<small>${esc(R.sel.gu)} 상위 ${fmt(gp)}% · ${G.length.toLocaleString()}곳 중 ${(ga+1).toLocaleString()}위</small>`:''}`;
 }
 function rankRender(){
