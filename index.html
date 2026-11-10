@@ -95,6 +95,12 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+.bigrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pct{display:flex;flex-direction:column;gap:1px;padding:6px 10px;border-radius:10px;background:var(--accent-soft);color:var(--accent);line-height:1.3}
+.pct b{font-size:15px;font-weight:700;white-space:nowrap}
+.pct small{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.pct.top{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good)}
+.pct.low{background:var(--bg);color:var(--muted)}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{flex:1;border:0;border-radius:0;background:var(--surface);color:var(--muted);font-size:12.5px;padding:7px 6px}
 .seg button+button{border-left:1px solid var(--line)}
@@ -581,7 +587,7 @@ function render(){
   box.innerHTML=`<h2>생존 점수</h2>
    <div class="score">
      <div class="score-left"><canvas id="swordCv" class="pix" role="img" aria-label="생존배수 ${R.ratio.toFixed(2)}배 · ${SWORD_STOPS[swordGrade(R.ratio)][1]}"></canvas>
-       <div><div class="big" style="color:${vc}">${R.ratio.toFixed(2)}<small>배</small></div>
+       <div><div class="bigrow"><div class="big" style="color:${vc}">${R.ratio.toFixed(2)}<small>배</small></div><div class="pct" id="pctChip" aria-live="polite"><b>순위 계산 중…</b></div></div>
        <span class="sword-grade">${SWORD_STOPS[swordGrade(R.ratio)][1]}</span>
        <span class="verdict" style="color:${vc};background:color-mix(in srgb, ${vc} 14%, transparent)">${vt}</span></div></div>
      <div style="min-width:0">${head}
@@ -1110,7 +1116,20 @@ function rankCompute(){
   }
   setTimeout(step,30);
 }
+function pctUpdate(){
+  const el=$('pctChip');if(!el)return;const R=LAST;
+  if(!R||R.err||!isFinite(R.ratio)){el.hidden=true;return;}el.hidden=false;
+  if(!RANK.list){el.innerHTML='<b>순위 계산 중…</b>';return;}
+  const L=RANK.list,N=L.length;if(!N){el.hidden=true;return;}
+  const fmt=p=>p<1?p.toFixed(1):p<10?p.toFixed(1):Math.round(p);
+  const above=L.filter(r=>r.ratio>R.ratio+1e-9).length,rank=above+1,pct=Math.max(0.1,rank/N*100);
+  const G=L.filter(r=>r.d.gu===R.sel.gu),ga=G.filter(r=>r.ratio>R.ratio+1e-9).length,gp=G.length?Math.max(0.1,(ga+1)/G.length*100):null;
+  const tone=pct<=10?'top':pct<=50?'mid':'low';
+  el.className='pct '+tone;
+  el.innerHTML=`<b>대구 상위 ${fmt(pct)}%</b><small>${N.toLocaleString()}곳 중 ${rank.toLocaleString()}위</small>${gp!=null?`<small>${esc(R.sel.gu)} 상위 ${fmt(gp)}% · ${G.length.toLocaleString()}곳 중 ${(ga+1).toLocaleString()}위</small>`:''}`;
+}
 function rankRender(){
+  pctUpdate();
   const ol=$('rank');if(!ol)return;
   document.querySelectorAll('#rankScope button').forEach(b=>{const on=b.dataset.r===RANK.scope;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
   if(!RANK.list){ol.innerHTML='';return;}
