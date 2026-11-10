@@ -95,6 +95,12 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+.pix{image-rendering:pixelated;image-rendering:crisp-edges;display:block;background:none!important;border:0!important;border-radius:0!important;cursor:default!important;touch-action:auto!important;max-width:none}
+.brand{display:flex;align-items:center;gap:12px}
+.start-turtle{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.score-left{display:flex;align-items:flex-end;gap:14px}
+.sword-grade{display:block;margin-top:6px;font-size:13px;font-weight:700;color:var(--ink)}
+@media (max-width:560px){.score-left{gap:8px}#swordCv{width:92px!important;height:72px!important}}
 .maplinks{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px}
 .ml-k{color:var(--muted);margin-right:2px}
 .ml{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--ink)!important;text-decoration:none;font-weight:600;line-height:1.3}
@@ -194,7 +200,7 @@ tr:hover td{background:var(--accent-soft)}
 <body>
 <div class="wrap">
   <header>
-    <h1>대구 음식점 생존배수</h1>
+    <div class="brand"><canvas id="hdrTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas><h1>대구 음식점 생존배수</h1></div>
     <p>가게를 고르고 k를 정하면, 가장 가까운 같은 업태 폐업 점포 k곳의 평균 영업 기간과 비교해 얼마나 오래 버텼는지 보여줍니다.</p>
     <div class="formula">생존배수 = 선택 점포 영업 기간 ÷ 주변 k개 폐업 점포의 평균 영업 기간</div>
     <div class="startbar" id="startBar" hidden>시작 위치 <b id="startCur"></b> <button type="button" id="startChange">다른 가게·지역으로 바꾸기</button></div>
@@ -215,6 +221,7 @@ tr:hover td{background:var(--accent-soft)}
       <button type="button" class="ex" data-q="달서구 상인동">달서구 상인동</button>
       <button type="button" class="ex" data-q="국밥대령">국밥대령</button>
     </div>
+    <div class="start-turtle" aria-live="polite"><canvas id="startTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas><span id="turtleMsg">오래 버틴 가게를 찾고 있습니다</span></div>
     <div class="start-foot"><p class="hint" id="startStatus">대구 음식점 데이터를 불러오는 중입니다…</p><button type="button" id="startSkip">건너뛰기</button></div>
   </section>
 
@@ -546,8 +553,10 @@ function render(){
   const [vt,vc]=verdict(R.ratio);const mx=Math.max(R.own,R.avg)*1.05||1;
   box.innerHTML=`<h2>생존 점수</h2>
    <div class="score">
-     <div><div class="big" style="color:${vc}">${R.ratio.toFixed(2)}<small>배</small></div>
-       <span class="verdict" style="color:${vc};background:color-mix(in srgb, ${vc} 14%, transparent)">${vt}</span></div>
+     <div class="score-left"><canvas id="swordCv" class="pix" role="img" aria-label="생존배수 ${R.ratio.toFixed(2)}배 · ${SWORD_STOPS[swordGrade(R.ratio)][1]}"></canvas>
+       <div><div class="big" style="color:${vc}">${R.ratio.toFixed(2)}<small>배</small></div>
+       <span class="sword-grade">${SWORD_STOPS[swordGrade(R.ratio)][1]}</span>
+       <span class="verdict" style="color:${vc};background:color-mix(in srgb, ${vc} 14%, transparent)">${vt}</span></div></div>
      <div style="min-width:0">${head}
        <div class="calc">${R.own.toFixed(1)}년 (${fd(s.start)} ~ ${s.closed?fd(s.end):REFLABEL}) ÷ ${R.avg.toFixed(1)}년 = ${R.ratio.toFixed(2)}</div></div>
    </div>
@@ -565,6 +574,7 @@ function render(){
    ${R.nb.length<R.k?`<p class="hint">조건에 맞는 폐업 점포가 ${R.nb.length}곳뿐이라 k=${R.k} 대신 ${R.nb.length}곳으로 계산했습니다.</p>`:''}
    ${s.warn?'<p class="hint" style="color:var(--warn)">지위승계 이력이 있어 상호나 업종이 중간에 바뀌었을 수 있습니다. 영업 기간은 최초 인허가일 기준입니다.</p>':''}
    ${!s.closed?`<p class="hint">영업 중인 가게는 데이터 기준일(${REFLABEL})까지의 기간으로 계산하므로, 계속 영업할수록 배수가 올라갑니다.</p>`:''}`;
+  if($('swordCv'))swordScene($('swordCv'),R.ratio);
   tbl.innerHTML=`<table><thead><tr><th>#</th><th>사업장명</th><th>업태</th><th>메뉴(추정)</th><th>구·군</th><th style="text-align:right">거리</th><th style="text-align:right">영업 기간</th><th>개업 ~ 폐업</th></tr></thead><tbody>${
     R.nb.map((n,i)=>`<tr><td class="n">${i+1}</td><td>${esc(n.d.name)}</td><td>${esc(n.d.type)}</td><td>${esc(n.d.menu||'–')}</td><td>${esc(n.d.gu||'–')}</td><td class="n">${fm(n.dist)}</td><td class="n">${n.yr.toFixed(1)}년</td><td>${fd(n.d.start)} ~ ${fd(n.d.end)}</td></tr>`).join('')}</tbody></table>`;
   draw();
@@ -862,6 +872,7 @@ function startInit(){
   $('startSkip').addEventListener('click',()=>{$('start').hidden=true;$('startBar').hidden=false;$('startCur').textContent='예시 가게';});
 }
 function startReady(){
+  turtleState($('startTurtle'),'idle');$('turtleMsg').textContent='가게나 동네를 입력해 보세요';
   buildAreas();
   $('startStatus').textContent=`대구 음식점 ${DATA.length.toLocaleString()}곳에서 찾을 수 있어요.`;
   $('startQ').disabled=false;
@@ -965,6 +976,76 @@ function kInit(){
   document.head.appendChild(sc);
 }
 
+/* ---------- 버틴집 캐릭터: 장수 거북이 + 픽셀 검 (캐릭터 사양서 기준) ---------- */
+const PIX={"turtle":{"width":40,"height":19,"transparent":".","palette":{"K":"#1C2421","G":"#3F6B5C","g":"#689470","h":"#28483E","Y":"#D9A441","y":"#F5D680","z":"#A06E26","S":"#96B070","s":"#BACE8E","t":"#6C8650","D":"#2C4E42","W":"#FCFAF2","E":"#1C1B19","P":"#DE6E60"},"frames":{"walk":[["........................................","..............KKKKKKKK..................","............KKggggggggKK................","..........KKggGGGGGGGGggKK..............",".........KggGzGGGGGGGGGzggK.............","........KgGGGzGGGGGGGGGzGGgK...KKKKKK...",".......KgGGGzGGGGGGGGGGGzGGgK.KssWWWWK..","......KgGGGGzGGGGGGGGGGGzGGGgKsSWSSSSsK.","......KGGGGGzzzzGGGGzzzzzGzzGKSSSSSESSK.","......KGzzzzGGGGzzzzGGGGGzGGSsSSSSSESSK.","......KGGGGzGGGGGGzGGGGGGzGGSSSSSSSSPtK.","......KGGGGzGGGGGGzGGGGGGzGGSSSStttttK..","......KGGGGzGGGGGGzGGGGGGzGGStttKKKKK...",".....KsGGGGzGGGGGGzGGGGGGzGGGKKK........","....KstzYYYYYYYYYYYYYYYYSSSYYKKK........","...KsKKKYYYzzSSSzzzzzzzzSSSYzDDDK.......","....K..KDDDKKSSSKKKKKKKKtttzKDDDK.......","........KKKKytttK.......KKKKKDDDK.......","............KKKK.............KKK........"],["..............KKKKKKKK..................","............KKggggggggKK................","..........KKggGGGGGGGGggKK..............",".........KggGzGGGGGGGGGzggK.............","........KgGGGzGGGGGGGGGzGGgK....KKKKKK..",".......KgGGGzGGGGGGGGGGGzGGgK..KssWWWWK.","......KgGGGGzGGGGGGGGGGGzGGGgKKsSWSSSSsK","......KGGGGGzzzzGGGGzzzzzGzzGKKSSSSSESSK","......KGzzzzGGGGzzzzGGGGGzGGSssSSSSSESSK","......KGGGGzGGGGGGzGGGGGGzGGSSSSSSSSSPtK","......KGGGGzGGGGGGzGGGGGGzGGSSSSStttttK.","......KGGGGzGGGGGGzGGGGGGzGGSttttKKKKK..",".....KsGGGGzGGGGGGzGGGGGGzGGGKKKK.......","....KstzYYYYYYYYYYYYYYYYYYYYYK..........","...KsKKKzYYYYYYzzzzzzzzzzYYYYKK.........","....K...KDDDSSSKKKKKKKKKKSSSDDDK........","........KDDDSSSK........KSSSDDDK........","........KDDztttK........KtttzDDK........",".........KKKKKK..........KKKKKK........."],["........................................","..............KKKKKKKK..................","............KKggggggggKK................","..........KKggGGGGGGGGggKK..............",".........KggGzGGGGGGGGGzggK.............","........KgGGGzGGGGGGGGGzGGgK...KKKKKK...",".......KgGGGzGGGGGGGGGGGzGGgK.KssWWWWK..","......KgGGGGzGGGGGGGGGGGzGGGgKsSWSSSSsK.","......KGGGGGzzzzGGGGzzzzzGzzGKSSSSSESSK.","......KGzzzzGGGGzzzzGGGGGzGGSsSSSSSESSK.","......KGGGGzGGGGGGzGGGGGGzGGSSSSSSSSPtK.","......KGGGGzGGGGGGzGGGGGGzGGSSSStttttK..","......KGGGGzGGGGGGzGGGGGGzGGStttKKKKK...",".....KsGGGGzGGGGGGzGGGGGGzGGGKKK........","....KstzYYYSSSYYYYYYYYYYYYYYYK..........","...KsKKKzzYSSSYzzzzzzzzzzYSSSK..........","....K...KKztSSDKKKKKKKKKKDSSSK..........","..........KKDDDK.........KtttyK.........","............KKK...........KKKK.........."],["..............KKKKKKKK..................","............KKggggggggKK................","..........KKggGGGGGGGGggKK..............",".........KggGzGGGGGGGGGzggK.............","........KgGGGzGGGGGGGGGzGGgK..KKKKKK....",".......KgGGGzGGGGGGGGGGGzGGgKKssWWWWK...","......KgGGGGzGGGGGGGGGGGzGGGgsSWSSSSsK..","......KGGGGGzzzzGGGGzzzzzGzzGSSSSSESSK..","......KGzzzzGGGGzzzzGGGGGzGGSSSSSSESSK..","......KGGGGzGGGGGGzGGGGGGzGGSSSSSSSPtK..","......KGGGGzGGGGGGzGGGGGGzGGSSStttttK...","......KGGGGzGGGGGGzGGGGGGzGGSttKKKKK....",".....KsGGGGzGGGGGGzGGGGGGzGGGKK.........","....KstzYYYYYYYYYYYYYYYYYYYYYK..........","...KsKKKzzzYYYYzzzzzzzzzzYYYYK..........","....K...KKKDSSSKKKKKKKKKKSSSDK..........","..........KDSSSK........KSSSDK..........","..........KztttK........KtttzK..........","...........KKKK..........KKKK..........."]]}},"sword":{"width":9,"height":21,"transparent":".","palette":{"P":"#F2C74D","p":"#B2802E","G":"#855433","g":"#5C3821","X":"#EDBD47","x":"#A87529","E":"#DB2E33","O":"#6B758C","H":"#FFFFFF","B":"#E0E8F7","b":"#B8C4DB"},"rows":["...pPp...","...PPP...","....p....","....G....","....g....","....G....","....g....","xXXXEXXXx",".xxXXXxx.","..OHBbO..","..OHBbO..","..OHBbO..","..OHBbO..","..OHBbO..","..OHBbO..","..OHBbO..","..OHBbO..","..OHBbO..","...OHO...","...OBO...","....O...."]}};
+const REDUCE=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+function hex2rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function rgb2hex(c){return '#'+c.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');}
+function paintRows(ctx,rows,pal,sc,ox,oy,tr){
+  rows.forEach((row,y)=>{for(let x=0;x<row.length;x++){const ch=row[x];if(ch===tr)continue;ctx.fillStyle=pal[ch];ctx.fillRect((ox+x)*sc,(oy+y)*sc,sc,sc);}});
+}
+/* 거북이: idle = 프레임 1, walk = 0→1→2→3 반복 180ms */
+const TURTLES=new Map();
+function turtleMount(cv,scale){
+  const T=PIX.turtle,dpr=Math.max(1,Math.round(window.devicePixelRatio||1)),sc=scale*dpr;
+  cv.width=T.width*sc;cv.height=T.height*sc;cv.style.width=T.width*scale+'px';cv.style.height=T.height*scale+'px';
+  const ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
+  const st={cv,ctx,sc,i:1,timer:0};
+  st.paint=()=>{ctx.clearRect(0,0,cv.width,cv.height);paintRows(ctx,T.frames.walk[st.i],T.palette,sc,0,0,T.transparent);};
+  st.paint();TURTLES.set(cv,st);return st;
+}
+function turtleState(cv,state){
+  const st=TURTLES.get(cv);if(!st)return;clearInterval(st.timer);st.timer=0;
+  if(state==='walk'&&!REDUCE()){st.timer=setInterval(()=>{st.i=(st.i+1)%4;st.paint();},180);}
+  else{st.i=1;st.paint();}
+}
+/* 검의 빛 = 생존배수 (6장) */
+const SWORD_STOPS=[['#60483E','부러질 듯한 검'],['#846858','녹슨 검'],['#9EA0A6','무딘 강철 검'],['#D6DEEC','은빛 검'],['#FFD068','황금빛 검'],['#FFF4C8','전설의 엑스칼리버']];
+function swordGrade(m){return m<0.5?0:m<1?1:m<2?2:m<4?3:m<8?4:5;}
+function swordTint(m){
+  const l=Math.max(-2,Math.min(3,Math.log2(Math.max(m,1e-6))));const i=Math.min(4,Math.floor(l+2)),f=(l+2)-i;
+  const a=hex2rgb(SWORD_STOPS[i][0]),b=hex2rgb(SWORD_STOPS[Math.min(5,i+1)][0]);return a.map((v,k)=>v+(b[k]-v)*f);
+}
+let SWORD_ANIM=0;
+function swordScene(cv,m){
+  cancelAnimationFrame(SWORD_ANIM);
+  const S=PIX.sword,W=46,H=36,scale=3,dpr=Math.max(1,Math.round(window.devicePixelRatio||1)),sc=scale*dpr;
+  cv.width=W*sc;cv.height=H*sc;cv.style.width=W*scale+'px';cv.style.height=H*scale+'px';
+  const ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
+  const tint=swordTint(m),pal={...S.palette};
+  for(const k of ['O','H','B','b','X','x']){const c=hex2rgb(pal[k]);pal[k]=rgb2hex(c.map((v,j)=>v*tint[j]/255));}
+  pal.K='#1C2421';
+  const rows=S.rows.slice(0,S.rows.length-2);
+  const ow=S.width+2,oh=rows.length+1,out=[];
+  for(let y=0;y<oh;y++){const yy=y-1;let r='';for(let x=0;x<ow;x++){const xx=x-1,at=(a,b)=>b>=0&&b<rows.length&&a>=0&&a<S.width&&rows[b][a]!=='.';
+    if(at(xx,yy))r+=rows[yy][xx];else if(at(xx-1,yy)||at(xx+1,yy)||at(xx,yy-1)||at(xx,yy+1))r+='K';else r+='.';}out.push(r);}
+  const ox=Math.floor((W-ow)/2),oy=H-oh,cx=ox+ow/2,cy=oy+8;
+  const lg=Math.log2(Math.max(m,1e-6)),power=m<1.5?0:Math.min(6,lg*1.6+0.4);
+  const nStars=power>0?Math.min(16,Math.round(2+power*2.2)):0;
+  let seed=Math.round(m*1000)+7;const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  const stars=[];for(let i=0;i<nStars;i++){let x,y,t=0;do{x=Math.floor(rnd()*(W-6))+3;y=Math.floor(rnd()*(H-8))+2;t++;}while(t<20&&Math.abs(x-cx)<6&&y>oy-2);stars.push({x,y,big:rnd()<0.4,ph:rnd()*6.28,sp:0.6+rnd()*0.8});}
+  const halo=m>=4?(m>=8?22:18):0;
+  const ring=(r,a)=>{ctx.fillStyle=`rgba(255,200,80,${a})`;for(let y=-r;y<=r;y+=2)for(let x=-r;x<=r;x+=2){if(x*x+y*y<=r*r){ctx.fillRect(Math.round(cx+x)*sc,Math.round(cy+y)*sc,2*sc,2*sc);}}};
+  const star=(s,on)=>{if(!on)return;const c='#FAC846',m2='#ECAA28',r=s.big?2:1;ctx.fillStyle=c;
+    for(let d=-r;d<=r;d++){ctx.fillRect((s.x+d)*sc,s.y*sc,sc,sc);ctx.fillRect(s.x*sc,(s.y+d)*sc,sc,sc);}ctx.fillStyle=m2;ctx.fillRect(s.x*sc,s.y*sc,sc,sc);};
+  const t0=performance.now(),still=REDUCE();
+  function frame(now){
+    const t=(now-t0)/1000;ctx.clearRect(0,0,cv.width,cv.height);
+    if(halo){const r=still?halo:Math.round(halo+6*Math.sin(t*0.9));ring(r,.12);ring(Math.round(r*.72),.18);ring(Math.round(r*.46),.26);}
+    stars.forEach(s=>star(s,still?true:Math.sin(t*3*s.sp+s.ph)>-0.2));
+    paintRows(ctx,out,pal,sc,ox,oy,'.');
+    if(!still&&(halo||nStars))SWORD_ANIM=requestAnimationFrame(frame);
+  }
+  frame(t0);
+  return SWORD_STOPS[swordGrade(m)][1];
+}
+/* 파비콘: 거북이 기본 자세 */
+function setTurtleFavicon(){
+  try{const T=PIX.turtle,c=document.createElement('canvas'),sc=2;c.width=c.height=T.width*sc;const x=c.getContext('2d');x.imageSmoothingEnabled=false;
+    paintRows(x,T.frames.walk[1],T.palette,sc,0,Math.floor((T.width-T.height)/2),T.transparent);
+    let l=document.querySelector('link[rel="icon"]');if(!l){l=document.createElement('link');l.rel='icon';document.head.appendChild(l);}l.href=c.toDataURL('image/png');}catch(e){}
+}
+
 /* ---------- search ---------- */
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
@@ -1011,6 +1092,7 @@ window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTim
 if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',draw);
 new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
+turtleMount($('hdrTurtle'),2);turtleMount($('startTurtle'),4);turtleState($('startTurtle'),'walk');setTurtleFavicon();
 startInit();loadBundled();kInit();
 })();
 </script>
