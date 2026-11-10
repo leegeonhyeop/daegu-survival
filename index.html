@@ -4,30 +4,35 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="대구 일반음식점이 주변 같은 업태 폐업 점포보다 얼마나 오래 버텼는지 생존배수로 보여줍니다.">
-<title>대구 음식점 생존배수</title>
+<title>버틴집 · 대구 음식점 생존배수</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Do+Hyeon&family=Silkscreen:wght@400;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
 
 /* Layout: control rail on the left, result column on the right (stacks on phones). Map is a TM-coordinate plot. */
 :root{
-  --bg:#F3F5F8; --surface:#FFFFFF; --ink:#16202E; --muted:#5B6678; --line:#DCE1E9;
-  --accent:#1F62A8; --accent-soft:#E3ECF7; --near:#C47A12; --near-soft:#F8ECD8;
-  --closed:#A9B0BC; --open:#5E8FC4; --mapbg:#EEF0EC; --maplabel:#3D4654; --good:#1E7F4F; --warn:#B26A00; --bad:#B23A3A;
+  /* 버틴집 브랜드: 진초록 #2E3B36 · 초록 #3F6B5C · 적갈색 #A8452F · 금색 #D9A441 · 종이색 #F4F2EE */
+  --bg:#F4F2EE; --surface:#FFFDF8; --ink:#1F2A26; --muted:#5E6A64; --line:#DDD8CC;
+  --accent:#3F6B5C; --accent-soft:#E4EDE7; --near:#A8452F; --near-soft:#F5E4DE;
+  --closed:#A9AEA8; --open:#5E8C78; --mapbg:#ECEADF; --maplabel:#3D4642; --good:#2F7A4F; --warn:#A8452F; --bad:#B23A3A;
+  --brand:#2E3B36; --brand-ink:#2E3B36; --gold:#D9A441; --gold-soft:#F6E9C8; --paper:#F4F2EE;
+  --f-sign:"Do Hyeon","IBM Plex Sans KR",system-ui,sans-serif; --f-pix:"Silkscreen","IBM Plex Mono",ui-monospace,monospace;
   --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0F151E; --surface:#17202C; --ink:#E6EBF2; --muted:#9AA6B8; --line:#2A3544;
-  --accent:#6FA8E6; --accent-soft:#1C2D42; --near:#E3A24A; --near-soft:#33281A;
-  --closed:#4A5464; --open:#4C77A6; --mapbg:#1B232D; --maplabel:#C4CCD8; --good:#5BC28C; --warn:#E3A24A; --bad:#E57373; color-scheme:dark}}
+  --bg:#151C19; --surface:#1E2723; --ink:#EDEFE8; --muted:#A3ADA6; --line:#33403A;
+  --accent:#8FBFA9; --accent-soft:#24362E; --near:#E08C72; --near-soft:#3A2620;
+  --closed:#56605A; --open:#5E8C78; --mapbg:#1C2420; --maplabel:#C6CEC8; --good:#7CCB9C; --warn:#E3A24A; --bad:#E57373;
+  --brand:#0F1714; --brand-ink:#CFE3D8; --gold:#E7B95A; --gold-soft:#3A3120; --paper:#151C19; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0F151E; --surface:#17202C; --ink:#E6EBF2; --muted:#9AA6B8; --line:#2A3544;
-  --accent:#6FA8E6; --accent-soft:#1C2D42; --near:#E3A24A; --near-soft:#33281A;
-  --closed:#4A5464; --open:#4C77A6; --mapbg:#1B232D; --maplabel:#C4CCD8; --good:#5BC28C; --warn:#E3A24A; --bad:#E57373; color-scheme:dark}
+  --bg:#151C19; --surface:#1E2723; --ink:#EDEFE8; --muted:#A3ADA6; --line:#33403A;
+  --accent:#8FBFA9; --accent-soft:#24362E; --near:#E08C72; --near-soft:#3A2620;
+  --closed:#56605A; --open:#5E8C78; --mapbg:#1C2420; --maplabel:#C6CEC8; --good:#7CCB9C; --warn:#E3A24A; --bad:#E57373;
+  --brand:#0F1714; --brand-ink:#CFE3D8; --gold:#E7B95A; --gold-soft:#3A3120; --paper:#151C19; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
@@ -140,14 +145,14 @@ button:disabled{opacity:.5;cursor:default}
 .nzoom{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;background:#fff;color:#333;border-radius:99px;padding:4px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.2);white-space:nowrap;pointer-events:none}
 .pop.kpop{position:relative;width:260px;max-width:none;margin-bottom:14px;color:var(--ink);white-space:normal;text-align:left;line-height:1.5;box-sizing:border-box}
 .k-sel{display:flex;flex-direction:column;align-items:center}
-.k-sel span{background:#1F62A8;color:#fff;font:700 12.5px/1 var(--f-body);padding:6px 10px;border-radius:99px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-.k-sel i{width:0;height:0;border:7px solid transparent;border-top:9px solid #1F62A8;border-bottom:0}
-.k-num{width:22px;height:22px;border-radius:50%;background:#E07B12;color:#fff;border:2px solid #fff;font:600 10px/18px var(--f-mono);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.k-sel span{background:#2E3B36;color:#fff;font:700 12.5px/1 var(--f-body);padding:6px 10px;border-radius:99px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.k-sel i{width:0;height:0;border:7px solid transparent;border-top:9px solid #2E3B36;border-bottom:0}
+.k-num{width:22px;height:22px;border-radius:50%;background:#A8452F;color:#fff;border:2px solid #fff;font:600 10px/18px var(--f-mono);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .k-dot{width:11px;height:11px;border-radius:50%;box-sizing:border-box}
 .k-open{background:#16A34A;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
 .k-closed{background:rgba(255,255,255,.85);border:2px solid #E11D48;position:relative}
 .k-closed::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:2px;background:#E11D48;transform:translate(-50%,-50%) rotate(-45deg)}
-.k-near{background:#E07B12;border:2px solid #fff}
+.k-near{background:#A8452F;border:2px solid #fff}
 .k-fr{width:11px;height:11px;border-radius:1px;background:#7C3AED;border:1.5px solid #fff;transform:rotate(45deg);box-shadow:0 0 0 1px rgba(0,0,0,.15)}
 .k-fr-c{background:#fff;border:2px solid #7C3AED}
 .start{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 20px;display:flex;flex-direction:column;gap:12px;max-width:720px;width:100%;margin:0 auto;box-shadow:0 6px 24px rgba(20,40,70,.08)}
@@ -184,7 +189,7 @@ button:disabled{opacity:.5;cursor:default}
 .maptype{position:absolute;top:10px;left:10px;display:flex;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.25);overflow:hidden;z-index:2}
 .maptype button{border:0;border-radius:0;background:#fff;color:#555;font:600 12.5px var(--f-body);padding:7px 13px}
 .maptype button+button{border-left:1px solid #e3e3e3}
-.maptype button.on{background:#1F62A8;color:#fff}
+.maptype button.on{background:#2E3B36;color:#fff}
 .mapmsg{position:absolute;top:50px;left:50%;transform:translateX(-50%);background:#fff;color:#333;font-size:12px;padding:5px 12px;border-radius:99px;box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:3;white-space:nowrap}
 canvas{width:100%;height:460px;display:block;border-radius:8px;background:var(--mapbg);cursor:grab;touch-action:none;border:1px solid var(--line)}
 canvas.drag{cursor:grabbing}
@@ -220,13 +225,51 @@ td.n{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-num
 tr:hover td{background:var(--accent-soft)}
 .empty{color:var(--muted);text-align:center;padding:40px 10px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---------- 버틴집 테마 ---------- */
+header{background:var(--brand);color:#F4F2EE;border-radius:14px;padding:22px 24px 20px;position:relative;overflow:hidden;box-shadow:0 4px 0 #1C2421}
+header::after{content:"";position:absolute;inset:auto 0 0 0;height:6px;background:repeating-linear-gradient(90deg,var(--gold) 0 12px,transparent 12px 18px);opacity:.55}
+header h1{font-family:var(--f-sign);font-weight:400;font-size:34px;letter-spacing:0;color:#FFF8E6;line-height:1.1}
+header p{color:#C9D3CD}
+header .formula{color:var(--gold);font-family:var(--f-mono);background:rgba(0,0,0,.18);display:inline-block;padding:4px 10px;border-radius:6px}
+.brand{gap:16px}
+.brand-t{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--gold);font-weight:700}
+#hdrTurtle{background:#F4F2EE!important;border-radius:10px!important;padding:6px;box-sizing:content-box;box-shadow:0 3px 0 #1C2421}
+.startbar{color:#C9D3CD}.startbar b{color:#FFF8E6}
+.startbar button{background:transparent;color:#FFF8E6;border-color:rgba(255,255,255,.35)}
+.panel{border-color:var(--line);box-shadow:0 3px 0 var(--line);border-radius:12px}
+.panel h2{display:flex;align-items:center;gap:8px;color:var(--brand-ink);font-weight:700;letter-spacing:.04em}
+.panel h2::before{content:"";width:8px;height:8px;background:var(--gold);box-shadow:2px 2px 0 var(--near);flex:none}
+button.primary{background:var(--brand);border-color:var(--brand-ink);color:#FFF8E6}
+button.primary:hover{background:var(--accent);border-color:var(--accent)}
+.start{border-top:5px solid var(--gold);box-shadow:0 5px 0 var(--line)}
+.start h2{font-family:var(--f-sign);font-weight:400;font-size:28px;color:var(--brand-ink)}
+.big{font-family:var(--f-pix);font-weight:700;letter-spacing:0;font-size:60px}
+.big small{font-family:var(--f-sign);font-weight:400}
+.sword-grade{color:#8A5A12;background:var(--gold-soft);display:inline-block;padding:2px 9px;border-radius:6px;font-size:12.5px}
+.store-name{font-family:var(--f-sign);font-weight:400;font-size:24px;color:var(--brand-ink)}
+.calc{background:var(--paper);border:1px dashed var(--line)}
+.knum{font-family:var(--f-pix);color:var(--brand-ink)}
+.rk-v{font-family:var(--f-pix);font-weight:700;color:var(--brand-ink)}
+.rank li:nth-child(1) .rk-n{background:#D9A441}
+.rank li:nth-child(2) .rk-n{background:#9AA3A0}
+.rank li:nth-child(3) .rk-n{background:#A8452F}
+.seg button.on{background:var(--brand)}
+.pct{border:1px solid currentColor}
+.team{border-top:3px double var(--line);color:var(--muted)}
+.team-brand{font-family:var(--f-sign);font-weight:400;font-size:18px;color:var(--brand-ink);margin-right:6px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .sword-grade{color:#F6D58A}}
+:root[data-theme="dark"] .sword-grade{color:#F6D58A}
+@media (max-width:560px){header{padding:18px 16px}header h1{font-size:26px}.big{font-size:46px}}
 </style>
 
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><canvas id="hdrTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas><h1>대구 음식점 생존배수</h1></div>
+    <div class="brand"><canvas id="hdrTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas>
+      <div class="brand-t"><span class="eyebrow">버틴집 · 오래 버틴 가게를 끈질기게 찾아냅니다</span><h1>대구 음식점 생존배수</h1></div></div>
     <p>가게를 고르고 k를 정하면, 가장 가까운 같은 업태 폐업 점포 k곳의 평균 영업 기간과 비교해 얼마나 오래 버텼는지 보여줍니다.</p>
     <div class="formula">생존배수 = 선택 점포 영업 기간 ÷ 주변 k개 폐업 점포의 평균 영업 기간</div>
     <div class="startbar" id="startBar" hidden>시작 위치 <b id="startCur"></b> <button type="button" id="startChange">다른 가게·지역으로 바꾸기</button></div>
@@ -335,7 +378,7 @@ tr:hover td{background:var(--accent-soft)}
     </div>
   </div>
   <footer class="team">
-    <span class="team-name">데이터서비스 4조 - 4P</span>
+    <span class="team-name"><span class="team-brand">버틴집</span> 데이터서비스 4조 - 4P</span>
     <span class="team-members">손효민 · 이재훈 · 이찬영 · 이건협</span>
   </footer>
 </div>
@@ -949,7 +992,7 @@ function kRender(){
   const R=LAST;if(!R||R.sel.x==null){kDots();return;}
   const s=R.sel,c=kLL(s);
   if(R.radius){
-    KK.circle=new kakao.maps.Circle({center:c,radius:R.radius,strokeWeight:2,strokeColor:'#E07B12',strokeOpacity:.9,strokeStyle:'shortdash',fillColor:'#F5A623',fillOpacity:.1});
+    KK.circle=new kakao.maps.Circle({center:c,radius:R.radius,strokeWeight:2,strokeColor:'#A8452F',strokeOpacity:.9,strokeStyle:'shortdash',fillColor:'#D9A441',fillOpacity:.1});
     KK.circle.setMap(KK.map);
   }
   const nb=R.nb||[],numbered=nb.length<=60;
