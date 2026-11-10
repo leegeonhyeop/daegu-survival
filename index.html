@@ -95,6 +95,14 @@ button:disabled{opacity:.5;cursor:default}
 .stat span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em}
 .stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .mapbox{position:relative}
+.maplinks{display:inline-flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px}
+.ml-k{color:var(--muted);margin-right:2px}
+.ml{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--ink)!important;text-decoration:none;font-weight:600;line-height:1.3}
+.ml::before{content:"";width:7px;height:7px;border-radius:50%;display:inline-block}
+.ml.n::before{background:#03C75A}.ml.k::before{background:#FEE500;box-shadow:0 0 0 1px #C9B400}.ml.g::before{background:#4285F4}
+.ml:hover{background:var(--accent-soft);border-color:var(--accent)}
+.ml:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pop-maps{margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
 #kmap{width:100%;height:460px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
 @media (max-width:560px){#kmap{height:400px}}
 .nzoom{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;background:#fff;color:#333;border-radius:99px;padding:4px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.2);white-space:nowrap;pointer-events:none}
@@ -533,7 +541,7 @@ function render(){
   const box=$('result'),tbl=$('tbl');
   if(!R){box.innerHTML='<div class="empty">왼쪽에서 가게를 골라 주세요.</div>';tbl.innerHTML='';draw();return;}
   const s=R.sel;
-  const head=`<div><p class="store-name">${esc(s.name)}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} · <a href="${naverUrl(s)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></p></div>`;
+  const head=`<div><p class="store-name">${esc(s.name)}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'}</p><div style="margin-top:6px">${mapLinks(s)}</div></div>`;
   if(R.err){box.innerHTML=`<h2>생존 점수</h2>${head}<p class="err">${esc(R.err)}</p>`;tbl.innerHTML='';draw();return;}
   const [vt,vc]=verdict(R.ratio);const mx=Math.max(R.own,R.avg)*1.05||1;
   box.innerHTML=`<h2>생존 점수</h2>
@@ -575,6 +583,19 @@ function buildLabels(){
 function naverUrl(d){
   const q=d.closed?String(d.addr).replace(/\s*\(.*\)\s*$/,''):`대구 ${d.gu||''} ${d.dong||''} ${d.name}`;
   return 'https://map.naver.com/p/search/'+encodeURIComponent(q.replace(/\s+/g,' ').trim());
+}
+function kakaoUrl(d){
+  if(d.x!=null&&typeof tmToLL==='function'){const [la,lo]=tmToLL(d.x,d.y);return 'https://map.kakao.com/link/map/'+encodeURIComponent(d.name)+','+la.toFixed(6)+','+lo.toFixed(6);}
+  return 'https://map.kakao.com/link/search/'+encodeURIComponent(`대구 ${d.gu||''} ${d.dong||''} ${d.name}`.replace(/\s+/g,' ').trim());
+}
+function googleUrl(d){
+  let q;
+  if(d.closed&&d.x!=null&&typeof tmToLL==='function'){const [la,lo]=tmToLL(d.x,d.y);q=la.toFixed(6)+','+lo.toFixed(6);}
+  else q=`${d.name} ${String(d.addr).replace(/\s*\(.*\)\s*$/,'')}`.replace(/\s+/g,' ').trim();
+  return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q);
+}
+function mapLinks(d){
+  return `<span class="maplinks"><span class="ml-k">지도에서 보기</span><a class="ml n" href="${naverUrl(d)}" target="_blank" rel="noopener">네이버</a><a class="ml k" href="${kakaoUrl(d)}" target="_blank" rel="noopener">카카오</a><a class="ml g" href="${googleUrl(d)}" target="_blank" rel="noopener">구글</a></span>`;
 }
 function fitView(){
   const R=LAST;if(!R||R.sel.x==null){V.ok=false;return;}
@@ -738,7 +759,8 @@ function showPop(d){
     <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
     ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
     <div class="pop-a">${d.id!==selId&&!d.closed?'<button class="primary" type="button" id="popSel">이 가게로 비교</button>':''}
-      <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
+      </div>
+    <div class="pop-maps">${mapLinks(d)}</div>`;
   p.hidden=false;
   p.querySelector('.pop-x').onclick=()=>showPop(null);
   const b=$('popSel');if(b)b.onclick=()=>{selId=d.id;showPop(null);runSearch();render();};
@@ -868,7 +890,8 @@ function kInfo(d){
     <div class="pop-m">${d.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'} ${fd(d.start)} ~ ${d.closed?fd(d.end):REFLABEL} · <b class="mono">${fy(yr)}</b></div>
     ${rank>=0?`<div class="pop-m" style="color:var(--near)">비교 대상 ${rank+1}번째 · ${fm(R.nb[rank].dist)}</div>`:''}
     <div class="pop-a">${d.id!==selId&&!d.closed?'<button class="primary" type="button" data-sel>이 가게로 비교</button>':''}
-      <a href="${naverUrl(d)}" target="_blank" rel="noopener">네이버 지도에서 보기 ↗</a></div>`;
+      </div>
+    <div class="pop-maps">${mapLinks(d)}</div>`;
   el.addEventListener('mousedown',e=>e.stopPropagation());
   el.querySelector('.pop-x').onclick=()=>kInfo(null);
   const b=el.querySelector('[data-sel]');if(b)b.onclick=()=>{kInfo(null);selId=d.id;runSearch();render();};
