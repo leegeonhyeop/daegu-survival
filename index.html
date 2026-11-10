@@ -233,6 +233,10 @@ tr:hover td{background:var(--accent-soft)}
 .empty{color:var(--muted);text-align:center;padding:40px 10px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
+/* 백년가게 */
+.c100-rule{margin:0;font-size:12px;background:#FFF8E1;color:#5B4300;padding:6px 8px;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff}
+.c100-y{color:#B45309!important}
+.chip.c100{background:#F59E0B;color:#1F1300;font-weight:700}
 /* ================= Retro Arcade Survival HUD (retrowebdesign_1110 · webdesign_1110) ================= */
 @font-face{font-family:"DungGeunMo";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff") format("woff");font-display:swap}
 :root,:root[data-theme="dark"]{
@@ -423,6 +427,14 @@ tr:hover td{background:#000080!important;color:#fff}
         <div class="seg" id="rankScope" role="group" aria-label="순위 범위"><button type="button" data-r="all" class="on" aria-pressed="true">대구 전체</button><button type="button" data-r="gu" aria-pressed="false">선택한 가게의 구·군</button></div>
         <ol class="rank" id="rank"></ol>
         <p class="hint" id="rankHint">데이터를 불러오면 순위를 계산합니다.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-c100">
+        <h2 id="h-c100"><span class="en">CENTURY SHOP</span> 백년가게 후보</h2>
+        <p class="c100-rule">백년가게 기준: <b>업력 30년 이상</b> · 음식점 · <b>프랜차이즈 가맹점 제외</b></p>
+        <div class="seg" id="c100Scope" role="group" aria-label="백년가게 후보 범위"><button type="button" data-r="all" class="on" aria-pressed="true">대구 전체</button><button type="button" data-r="gu" aria-pressed="false">선택한 가게의 구·군</button></div>
+        <ol class="rank" id="c100"></ol>
+        <p class="hint" id="c100Hint">데이터를 불러오면 후보를 찾습니다.</p>
       </section>
     </div>
 
@@ -704,7 +716,7 @@ function render(){
   const box=$('result'),tbl=$('tbl');
   if(!R){box.innerHTML='<div class="empty">왼쪽에서 가게를 골라 주세요.</div>';tbl.innerHTML='';draw();return;}
   const s=R.sel;
-  const head=`<div><p class="store-name">${esc(s.name)}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'}</p><div style="margin-top:6px">${mapLinks(s)}</div></div>`;
+  const head=`<div><p class="store-name">${esc(s.name)}${isC100(s)?' <span class="chip c100" title="업력 30년 이상 · 프랜차이즈 아님 (추정)">백년가게 기준 충족</span>':''}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'}</p><div style="margin-top:6px">${mapLinks(s)}</div></div>`;
   if(R.err){box.innerHTML=`<h2><span class="en">BATTLE STATS</span> 생존 점수</h2>${head}<p class="err">${esc(R.err)}</p>`;tbl.innerHTML='';draw();return;}
   const [vt,vc]=verdict(R.ratio);const mx=Math.max(R.own,R.avg)*1.05||1;
   box.innerHTML=`<h2><span class="en">BATTLE STATS</span> 생존 점수</h2>
@@ -1257,7 +1269,23 @@ function pctUpdate(){
     bar.innerHTML=row('대구',pct)+(gp!=null?row(esc(R.sel.gu),gp):'')+'<div class="pb-ax"><span></span><span class="pb-axt"><span>상위 1%</span><span>50%</span><span>100%</span></span><span></span></div>';}
   el.innerHTML=`<b>대구 상위 ${fmt(pct)}%</b><small>${N.toLocaleString()}곳 중 ${rank.toLocaleString()}위</small>${gp!=null?`<small>${esc(R.sel.gu)} 상위 ${fmt(gp)}% · ${G.length.toLocaleString()}곳 중 ${(ga+1).toLocaleString()}위</small>`:''}`;
 }
+/* ---------- 백년가게 후보: 업력 30년 이상 · 영업 중 · 프랜차이즈 아님 ---------- */
+const C100={scope:'all'};
+const isC100=d=>!d.closed&&!d.fr&&years(d)>=30;
+function c100Render(){
+  const ol=$('c100');if(!ol||!DATA.length)return;
+  document.querySelectorAll('#c100Scope button').forEach(b=>{const on=b.dataset.r===C100.scope;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
+  const sel=DATA.find(d=>d.id===selId);
+  let L=DATA.filter(isC100);const all=L.length;
+  if(C100.scope==='gu'&&sel)L=L.filter(d=>d.gu===sel.gu);
+  L.sort((a,b)=>years(b)-years(a));
+  ol.innerHTML=L.map((d,i)=>`<li><button type="button" class="rk${d.id===selId?' sel':''}" data-id="${d.id}">
+    <span class="rk-n">${i+1}</span><span class="rk-m"><b>${esc(d.name)}${d.warn?' <i class="rk-w" title="지위승계 이력: 사장·상호가 바뀌었을 수 있음">승계</i>':''}</b><small>${esc(d.menu||d.type)} · ${esc(d.gu)} ${esc(d.dong||'')} · ${fd(d.start)} 개업</small></span>
+    <span class="rk-v c100-y">${years(d).toFixed(1)}<small>년</small></span></button></li>`).join('')||'<li class="hint" style="padding:10px">조건에 맞는 가게가 없습니다.</li>';
+  $('c100Hint').textContent=`${C100.scope==='gu'&&sel?sel.gu+' ':'대구 '}${L.length.toLocaleString()}곳${C100.scope==='gu'?` (대구 전체 ${all.toLocaleString()}곳)`:''} · 업력은 인허가일부터 데이터 기준일(${REFLABEL})까지입니다. 사업자등록 기준 업력과 다를 수 있고, 대기업 자회사 여부는 확인하지 못했습니다. '승계'는 사장·상호가 바뀌었을 수 있는 가게입니다.`;
+}
 function rankRender(){
+  c100Render();
   pctUpdate();
   const ol=$('rank');if(!ol)return;
   document.querySelectorAll('#rankScope button').forEach(b=>{const on=b.dataset.r===RANK.scope;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
@@ -1325,6 +1353,8 @@ new MutationObserver(draw).observe(document.documentElement,{attributes:true,att
 turtleMount($('hdrTurtle'),2);turtleMount($('startTurtle'),4);turtleState($('startTurtle'),'walk');setTurtleFavicon();
 document.querySelectorAll('.panel > h2, .start > h2').forEach(h=>{if(!h.querySelector('.wbtns'))h.insertAdjacentHTML('beforeend','<span class="wbtns" aria-hidden="true"><i>_</i><i>□</i><i>×</i></span>');});
 new MutationObserver(()=>{const h=document.querySelector('#result > h2');if(h&&!h.querySelector('.wbtns'))h.insertAdjacentHTML('beforeend','<span class="wbtns" aria-hidden="true"><i>_</i><i>□</i><i>×</i></span>');const n=document.querySelector('.store-name');if(n)$('sbSel').textContent='TARGET: '+n.textContent.trim().slice(0,24);}).observe($('result'),{childList:true});
+document.querySelectorAll('#c100Scope button').forEach(b=>b.addEventListener('click',()=>{C100.scope=b.dataset.r;c100Render();}));
+$('c100').addEventListener('click',e=>{const b=e.target.closest('.rk');if(!b)return;selId=+b.dataset.id;runSearch();render();});
 startInit();loadBundled();kInit();
 })();
 </script>
