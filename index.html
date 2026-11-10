@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="대구 일반음식점이 주변 같은 업태 폐업 점포보다 얼마나 오래 버텼는지 생존배수로 보여줍니다.">
-<title>대구 음식점 생존배수</title>
+<title>대구 음식점 생존배수 v1.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=Space+Mono:wght@400;700&family=Public+Sans:wght@400;500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
@@ -232,20 +232,130 @@ td.n{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-num
 tr:hover td{background:var(--accent-soft)}
 .empty{color:var(--muted);text-align:center;padding:40px 10px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ================= Retro Arcade Survival HUD (retrowebdesign_1110 · webdesign_1110) ================= */
+@font-face{font-family:"DungGeunMo";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff") format("woff");font-display:swap}
+:root,:root[data-theme="dark"]{
+  --bg:#EBE9E9; --surface:#F4F3F3; --ink:#191C1C; --muted:#3F4948; --line:#808080;
+  --accent:#008080; --accent-soft:#CCE8E7; --near:#527C96; --near-soft:#DCE7EE;
+  --closed:#9AA0A0; --open:#3E8E7E; --mapbg:#EEF0EC; --maplabel:#2D3131; --good:#0E8A62; --warn:#B26A00; --bad:#BA1A1A;
+  --chassis:#C0C0C0; --hi:#FFFFFF; --lo:#808080; --dk:#000000; --term:#0F2027; --term2:#162A32; --emerald:#00FFCC; --gold:#F59E0B; --coral:#E11D48;
+  --f-body:"Public Sans","IBM Plex Sans KR",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"Space Mono","IBM Plex Mono",ui-monospace,monospace;
+  --f-head:"Space Grotesk","DungGeunMo","IBM Plex Sans KR",sans-serif;
+  --f-pix:"DungGeunMo","Space Mono","IBM Plex Sans KR",monospace;
+  color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#EBE9E9; --surface:#F4F3F3; --ink:#191C1C; --muted:#3F4948; --line:#808080;
+  --accent:#008080; --accent-soft:#CCE8E7; --near:#527C96; --near-soft:#DCE7EE;
+  --closed:#9AA0A0; --open:#3E8E7E; --mapbg:#EEF0EC; --maplabel:#2D3131; --good:#0E8A62; --warn:#B26A00; --bad:#BA1A1A; color-scheme:light}}
+body{background:var(--bg);background-image:radial-gradient(rgba(0,0,0,.06) 1px,transparent 1px);background-size:4px 4px;font-family:var(--f-body);font-size:13.5px;padding-bottom:0}
+*{border-radius:0!important}
+.wrap{gap:14px}
+/* 윈도우 = 바깥 베벨 */
+.win,.panel,.start{background:var(--chassis);border:1px solid #DFDFDF;box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo),0 0 0 1px var(--dk);padding:3px 10px 10px}
+.panel{gap:10px}
+.panel>h2,.start>h2,#result>h2,.titlebar{margin:0 -7px 4px;padding:3px 4px 3px 8px;min-height:24px;display:flex;align-items:center;gap:8px;
+  background:linear-gradient(90deg,#005F5F,#008080 45%,#3AA6A6);color:#fff;font-family:var(--f-head);font-weight:700;font-size:13px;letter-spacing:.01em;text-transform:none}
+.panel>h2 .en,#result>h2 .en,.start>h2 .qt{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;background:rgba(0,0,0,.25);padding:1px 6px}
+.wbtns{margin-left:auto;display:flex;gap:2px}
+.wbtns i{font-style:normal;width:16px;height:14px;display:grid;place-items:center;background:var(--chassis);color:#000;font:700 10px/1 var(--f-mono);box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo),0 0 0 1px var(--dk)}
+/* 헤더 = 시스템 크롬 */
+header.win{padding:3px 12px 12px;color:var(--ink)}
+.titlebar{margin:0 -9px 8px;min-height:30px}
+.titlebar h1{font-family:var(--f-head);font-size:16px;font-weight:700;color:#fff;margin:0;letter-spacing:0}
+.tb-tag{font-family:var(--f-mono);font-size:11px;color:var(--emerald)}
+#hdrTurtle{width:42px!important;height:20px!important;background:#F4F3F3!important;box-shadow:0 0 0 1px #000}
+.sysrow{display:flex;gap:8px;flex-wrap:wrap}
+.sys{font-family:var(--f-mono);font-size:11.5px;background:var(--term);color:var(--emerald);padding:3px 8px;box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi)}
+.sys b{color:#FFE27A}
+header.win p{color:var(--muted);margin-top:8px}
+header.win .formula{font-family:var(--f-mono);background:#fff;color:#000;padding:5px 8px;display:inline-block;box-shadow:inset 1px 1px 0 var(--lo),inset 2px 2px 0 var(--dk),inset -1px -1px 0 var(--hi)}
+.startbar{color:var(--ink)}
+/* 우물 = 안쪽 베벨 */
+input[type=text],select,.list,.tbl,.rank,.calc,.drop,#cv,#kmap,.start-sug:not(:empty){background:#fff;border:0!important;box-shadow:inset 1px 1px 0 var(--lo),inset 2px 2px 0 var(--dk),inset -1px -1px 0 var(--hi),inset -2px -2px 0 #DFDFDF}
+input[type=text]{font-family:var(--f-mono);padding:7px 9px}
+.drop{background:var(--surface)}
+/* 버튼 = 바깥 베벨, 눌림 = 반전 */
+button{background:var(--chassis);color:#000;border:0;box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo),inset 2px 2px 0 #DFDFDF,inset -2px -2px 0 var(--dk);padding:6px 12px}
+button:active{box-shadow:inset 1px 1px 0 var(--dk),inset 2px 2px 0 var(--lo),inset -1px -1px 0 var(--hi);transform:translateY(1px)}
+button.primary{background:var(--accent);color:#fff;font-family:var(--f-mono);font-weight:700;letter-spacing:.04em;box-shadow:inset 1px 1px 0 #5FD0D0,inset -1px -1px 0 #003C3C,0 0 0 1px #000}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px dotted #000;outline-offset:2px}
+.chip,.verdict,.sword-grade,.pct,.ml,.badge-closed,.start-ex button,.seg,.sug-k{border-radius:0!important}
+.start-ex button{font-size:12px}
+/* 시작 = 퀘스트 */
+.start{max-width:760px}
+.start>h2{font-size:14px}
+.npc{position:relative;background:#fff;color:#000;padding:8px 12px;box-shadow:0 0 0 2px #000;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.npc::before{content:"";position:absolute;left:-10px;top:50%;border:6px solid transparent;border-right:8px solid #000;transform:translateY(-50%)}
+.npc-n{font-family:var(--f-pix);font-size:12px;color:var(--accent)}
+.npc-n b{color:var(--gold)}
+#startTurtle{background:transparent!important}
+/* 목록 */
+.item{border-bottom:1px solid #E0E0E0}
+.item:nth-child(even){background:#F5F5F5}
+.item.sel,.item.sel:hover{background:#000080;color:#fff;box-shadow:none}
+.item.sel small,.item.sel .r{color:#C8D4FF}
+.item .r{font-family:var(--f-mono)}
+/* 배틀 스탯 HUD */
+.score-left{background:linear-gradient(180deg,var(--term),var(--term2));padding:12px 14px;box-shadow:inset 1px 1px 0 var(--lo),inset 2px 2px 0 var(--dk),inset -1px -1px 0 var(--hi);color:#E6F7F3;position:relative}
+.score-left::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
+.score-left .big{font-family:var(--f-mono);font-weight:700;filter:brightness(1.7) saturate(1.3);text-shadow:0 0 8px currentColor}
+.score-left .pct{background:rgba(0,255,204,.08)!important;color:var(--emerald)!important;border:1px solid var(--emerald)}
+.score-left .pct small{color:#9FC9C0}
+.score-left .pb-l,.score-left .pb-ax{color:#9FC9C0}
+.score-left .pb-t{background:#0A1418;box-shadow:inset 0 0 0 1px #2C4A52}
+.score-left .pctbar{--pc:var(--emerald)}.score-left .pctbar.low{--pc:#9FB0B0}.score-left .pctbar.mid{--pc:#FFE27A}
+.score-left .pb-t b{border-color:var(--term)}
+.score-left .sword-grade{color:var(--gold);font-family:var(--f-pix)}
+.score-left .verdict{background:transparent!important;border:1px solid currentColor;filter:brightness(1.6)}
+.store-name{font-family:var(--f-head);font-size:20px}
+.calc{font-family:var(--f-mono)}
+/* EXP 바 */
+.bar .t{height:16px;background:#fff;box-shadow:inset 1px 1px 0 var(--lo),inset 2px 2px 0 var(--dk),inset -1px -1px 0 var(--hi);padding:2px}
+.bar .t i{height:100%;background-image:repeating-linear-gradient(90deg,currentColor 0 8px,transparent 8px 10px)!important;background-color:transparent!important}
+.bar:first-child .t i{color:var(--good)}.bar:nth-child(2) .t i{color:var(--near)}
+.bar .v,.stat b{font-family:var(--f-mono)}
+.stat{background:#fff;padding:6px 8px;box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi)}
+/* 레이더 */
+.mapbox{position:relative}
+.mapbox::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.04) 0 1px,transparent 1px 3px);z-index:4}
+/* 전투 기록 표 */
+th{background:var(--chassis)!important;color:#000;box-shadow:inset 1px 1px 0 var(--hi),inset -1px -1px 0 var(--lo);font-family:var(--f-mono);font-size:11px}
+tbody tr:nth-child(even) td{background:#F5F5F5}
+tr:hover td{background:#000080!important;color:#fff}
+/* 하이스코어 */
+.seg{box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi);border:0}
+.seg button{box-shadow:none}
+.seg button.on{background:#000080;color:#fff}
+.rank li:nth-child(odd){background:#fff}.rank li:nth-child(even){background:#F5F5F5}
+.rk.sel{background:#000080!important;color:#fff;box-shadow:none}.rk.sel small,.rk.sel .rk-v{color:#C8D4FF}
+.rk-v{font-family:var(--f-mono);color:var(--accent)}
+.rank li:nth-child(1) .rk-n{background:var(--gold)}.rank li:nth-child(2) .rk-n{background:#9CA3AF}.rank li:nth-child(3) .rk-n{background:#B45309}
+/* 상태 표시줄 */
+.statusbar{position:sticky;bottom:0;z-index:20;display:flex;gap:3px;background:var(--chassis);padding:3px;margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-bottom:calc(3px + env(safe-area-inset-bottom,0px));box-shadow:inset 0 1px 0 var(--hi),0 -1px 0 var(--lo)}
+.statusbar span{flex:1;font-family:var(--f-mono);font-size:11px;padding:2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 1px 1px 0 var(--lo),inset -1px -1px 0 var(--hi)}
+.statusbar span:last-child{flex:none}
+.team{border-top:0}
+.team-name{font-family:var(--f-head)}
+@media (max-width:560px){.score-left{min-width:0;flex-wrap:wrap}.score-left>div{min-width:0}.pctbar{min-width:0;flex-basis:100%}.pb-row,.pb-ax{grid-template-columns:40px 1fr 64px}}
+@media (max-width:767px){.statusbar span:nth-child(2),.statusbar span:nth-child(4){display:none}.titlebar h1{font-size:14px}.tb-tag{display:none}}
+@media (prefers-reduced-motion:reduce){button:active{transform:none}}
 </style>
 
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="brand"><canvas id="hdrTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas><h1>대구 음식점 생존배수</h1></div>
+  <header class="win">
+    <div class="titlebar"><canvas id="hdrTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas><h1>대구 음식점 생존배수 v1.0 <span class="tb-tag">[SURVIVAL FACTOR]</span></h1><span class="wbtns" aria-hidden="true"><i>_</i><i>□</i><i>×</i></span></div>
+    <div class="sysrow"><span class="sys">SYS: EPSG:5174 | <b id="sysState">LOADING…</b></span><span class="sys">DATA: 행정안전부 일반음식점 15154916</span></div>
     <p>가게를 고르고 k를 정하면, 가장 가까운 같은 업태 폐업 점포 k곳의 평균 영업 기간과 비교해 얼마나 오래 버텼는지 보여줍니다.</p>
     <div class="formula">생존배수 = 선택 점포 영업 기간 ÷ 주변 k개 폐업 점포의 평균 영업 기간</div>
     <div class="startbar" id="startBar" hidden>시작 위치 <b id="startCur"></b> <button type="button" id="startChange">다른 가게·지역으로 바꾸기</button></div>
   </header>
 
   <section class="start" id="start" aria-labelledby="h-start">
-    <h2 id="h-start">어떤 가게가 궁금하세요?</h2>
+    <h2 id="h-start"><span class="qt">QUEST 01: TARGET SELECTION</span> 어떤 가게가 궁금하세요?</h2>
     <p>가게 이름이나 동네(구·동)를 입력하면 그곳을 기준으로 시작합니다. 다음에 들어올 때도 이 위치로 열려요.</p>
     <div class="start-box">
       <input type="text" id="startQ" placeholder="예: 국밥대령, 수성구 범어동, 동인동" autocomplete="off" disabled aria-label="가게 이름 또는 지역">
@@ -259,14 +369,14 @@ tr:hover td{background:var(--accent-soft)}
       <button type="button" class="ex" data-q="달서구 상인동">달서구 상인동</button>
       <button type="button" class="ex" data-q="국밥대령">국밥대령</button>
     </div>
-    <div class="start-turtle" aria-live="polite"><canvas id="startTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas><span id="turtleMsg">오래 버틴 가게를 찾고 있습니다</span></div>
+    <div class="start-turtle" aria-live="polite"><canvas id="startTurtle" class="pix" role="img" aria-label="버틴집 거북이"></canvas><div class="npc"><span class="npc-n">달구벌 거북 수호자 <b>Lv.99</b></span><span id="turtleMsg">오래 버틴 가게를 찾고 있습니다</span></div></div>
     <div class="start-foot"><p class="hint" id="startStatus">대구 음식점 데이터를 불러오는 중입니다…</p><button type="button" id="startSkip">건너뛰기</button></div>
   </section>
 
   <div class="grid">
     <div class="rail">
       <section class="panel" aria-labelledby="h-data">
-        <h2 id="h-data">데이터</h2>
+        <h2 id="h-data"><span class="en">DATA ENGINE</span> 데이터</h2>
         <div class="src" id="srcLine"></div>
         <div class="drop" id="drop">
           최신 데이터로 바꾸려면 일반음식점 CSV 또는 API 응답 JSON을 끌어다 놓거나
@@ -287,14 +397,14 @@ tr:hover td{background:var(--accent-soft)}
       </section>
 
       <section class="panel" aria-labelledby="h-store">
-        <h2 id="h-store">가게 선택</h2>
+        <h2 id="h-store"><span class="en">RESTAURANT PICKER</span> 가게 선택</h2>
         <input type="text" id="q" placeholder="상호명 또는 동네로 검색" autocomplete="off">
         <div class="list" id="list" role="listbox" aria-label="검색 결과"></div>
         <p class="hint" id="listHint"></p>
       </section>
 
       <section class="panel" aria-labelledby="h-k">
-        <h2 id="h-k">비교 범위</h2>
+        <h2 id="h-k"><span class="en">ALGORITHM PARAMETERS</span> 비교 범위</h2>
         <label for="k">주변 폐업 점포 수 k</label>
         <div class="krow"><input type="range" id="k" min="3" max="100" value="20"><span class="knum" id="kNum">20</span></div>
         <div class="checks">
@@ -309,7 +419,7 @@ tr:hover td{background:var(--accent-soft)}
       </section>
 
       <section class="panel" aria-labelledby="h-rank">
-        <h2 id="h-rank">생존배수 순위 TOP 100</h2>
+        <h2 id="h-rank"><span class="en">TOP 100 HIGH SCORE</span> 생존배수 순위</h2>
         <div class="seg" id="rankScope" role="group" aria-label="순위 범위"><button type="button" data-r="all" class="on" aria-pressed="true">대구 전체</button><button type="button" data-r="gu" aria-pressed="false">선택한 가게의 구·군</button></div>
         <ol class="rank" id="rank"></ol>
         <p class="hint" id="rankHint">데이터를 불러오면 순위를 계산합니다.</p>
@@ -319,7 +429,7 @@ tr:hover td{background:var(--accent-soft)}
     <div class="main">
       <section class="panel" id="result" aria-live="polite"></section>
       <section class="panel" aria-labelledby="h-map">
-        <h2 id="h-map">위치</h2>
+        <h2 id="h-map"><span class="en">SURVIVAL RADAR</span> 위치</h2>
         <div class="mapbox"><div id="kmap" hidden></div><div class="nzoom" id="kzoom" hidden>더 확대하면 주변 가게가 모두 보입니다</div><canvas id="cv" aria-label="선택 가게와 주변 폐업 점포 지도. 드래그로 이동, 휠로 확대"></canvas>
           <div class="zoom">
             <button type="button" id="zin" aria-label="확대">+</button>
@@ -341,11 +451,12 @@ tr:hover td{background:var(--accent-soft)}
         <p class="hint" id="mapHint">드래그로 이동하고 휠·두 손가락·더블클릭으로 확대합니다. 점을 누르면 가게 정보와 네이버 지도 링크가 나옵니다.</p>
       </section>
       <section class="panel" aria-labelledby="h-tbl">
-        <h2 id="h-tbl">비교 대상 폐업 점포</h2>
+        <h2 id="h-tbl"><span class="en">COMBAT LOG</span> 비교 대상 폐업 점포</h2>
         <div class="tbl" id="tbl"></div>
       </section>
     </div>
   </div>
+  <div class="statusbar" role="status"><span id="sbCount">대구 음식점 97,575곳 탐색 가능</span><span>EPSG:5174 READY</span><span id="sbSel">TARGET: -</span><span>4P</span></div>
   <footer class="team">
     <span class="team-name">데이터서비스 4조 - 4P</span>
     <span class="team-members">손효민 · 이재훈 · 이찬영 · 이건협</span>
@@ -594,9 +705,9 @@ function render(){
   if(!R){box.innerHTML='<div class="empty">왼쪽에서 가게를 골라 주세요.</div>';tbl.innerHTML='';draw();return;}
   const s=R.sel;
   const head=`<div><p class="store-name">${esc(s.name)}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'}</p><div style="margin-top:6px">${mapLinks(s)}</div></div>`;
-  if(R.err){box.innerHTML=`<h2>생존 점수</h2>${head}<p class="err">${esc(R.err)}</p>`;tbl.innerHTML='';draw();return;}
+  if(R.err){box.innerHTML=`<h2><span class="en">BATTLE STATS</span> 생존 점수</h2>${head}<p class="err">${esc(R.err)}</p>`;tbl.innerHTML='';draw();return;}
   const [vt,vc]=verdict(R.ratio);const mx=Math.max(R.own,R.avg)*1.05||1;
-  box.innerHTML=`<h2>생존 점수</h2>
+  box.innerHTML=`<h2><span class="en">BATTLE STATS</span> 생존 점수</h2>
    <div class="score">
      <div class="score-left"><canvas id="swordCv" class="pix" role="img" aria-label="생존배수 ${R.ratio.toFixed(2)}배 · ${SWORD_STOPS[swordGrade(R.ratio)][1]}"></canvas>
        <div><div class="bigrow"><div class="big" style="color:${vc}">${R.ratio.toFixed(2)}<small>배</small></div><div class="pct" id="pctChip" aria-live="polite"><b>순위 계산 중…</b></div></div>
@@ -919,6 +1030,7 @@ function startInit(){
   $('startSkip').addEventListener('click',()=>{$('start').hidden=true;$('startBar').hidden=false;$('startCur').textContent='예시 가게';});
 }
 function startReady(){
+  $('sysState').textContent='READY / DATA ONLINE';$('sbCount').textContent=`대구 음식점 ${DATA.length.toLocaleString()}곳 탐색 가능`;
   setTimeout(rankCompute,200);
   turtleState($('startTurtle'),'idle');$('turtleMsg').textContent='가게나 동네를 입력해 보세요';
   buildAreas();
@@ -1211,6 +1323,8 @@ if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener
 new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
 turtleMount($('hdrTurtle'),2);turtleMount($('startTurtle'),4);turtleState($('startTurtle'),'walk');setTurtleFavicon();
+document.querySelectorAll('.panel > h2, .start > h2').forEach(h=>{if(!h.querySelector('.wbtns'))h.insertAdjacentHTML('beforeend','<span class="wbtns" aria-hidden="true"><i>_</i><i>□</i><i>×</i></span>');});
+new MutationObserver(()=>{const h=document.querySelector('#result > h2');if(h&&!h.querySelector('.wbtns'))h.insertAdjacentHTML('beforeend','<span class="wbtns" aria-hidden="true"><i>_</i><i>□</i><i>×</i></span>');const n=document.querySelector('.store-name');if(n)$('sbSel').textContent='TARGET: '+n.textContent.trim().slice(0,24);}).observe($('result'),{childList:true});
 startInit();loadBundled();kInit();
 })();
 </script>
