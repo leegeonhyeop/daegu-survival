@@ -237,6 +237,12 @@ tr:hover td{background:var(--accent-soft)}
 .c100-rule{margin:0;font-size:12px;background:#FFF8E1;color:#5B4300;padding:6px 8px;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff}
 .c100-y{color:#B45309!important}
 .chip.c100{background:#F59E0B;color:#1F1300;font-weight:700}
+.chip.cent{background:#B91C1C;color:#FFF7ED;font-weight:700}
+.chip.kind{background:#DBEAFE;color:#1E3A8A}
+.chip.unk{background:#FEF3C7;color:#92400E}
+.star{color:#D97706;margin-right:3px;font-weight:700}
+.srcw{flex:0 0 100%;min-width:0;max-width:100%}
+.src{min-width:0}.srcr{border-top:1px solid var(--line);padding:6px 0;font-size:12.5px}.srcr small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}.srcn{color:var(--muted);font-size:12px}.srcr em{font-style:normal;font-size:10px;background:#DCFCE7;color:#166534;padding:0 4px;border-radius:3px;margin-left:2px}
 /* ================= Retro Arcade Survival HUD (retrowebdesign_1110 · webdesign_1110) ================= */
 @font-face{font-family:"DungGeunMo";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff") format("woff");font-display:swap}
 :root,:root[data-theme="dark"]{
@@ -419,6 +425,7 @@ tr:hover td{background:#000080!important;color:#fff}
             <option value="all">모든 음식점</option>
           </select>
           <label><input type="checkbox" id="sameGu"> 같은 구·군 안에서만 찾기</label>
+          <label title="일반음식점은 일반음식점끼리, 휴게음식점(카페·분식 등)은 휴게음식점끼리, 제과점은 제과점끼리 비교합니다"><input type="checkbox" id="sameKind" checked> 같은 업종(일반·휴게·제과)끼리만 비교</label>
         </div>
       </section>
 
@@ -431,7 +438,7 @@ tr:hover td{background:#000080!important;color:#fff}
 
       <section class="panel" aria-labelledby="h-c100">
         <h2 id="h-c100"><span class="en">CENTURY SHOP</span> 백년가게 후보</h2>
-        <p class="c100-rule">백년가게 기준: <b>업력 30년 이상</b> · 음식점 · <b>프랜차이즈 가맹점 제외</b></p>
+        <p class="c100-rule">백년가게 기준: <b>업력 30년 이상</b> · 음식점 · <b>프랜차이즈 가맹점 제외</b><br><span class="star">★</span> 실제 선정된 가게 · 나머지는 데이터로 추정한 후보입니다 (공식 인증 아님)</p>
         <div class="seg" id="c100Scope" role="group" aria-label="백년가게 후보 범위"><button type="button" data-r="all" class="on" aria-pressed="true">대구 전체</button><button type="button" data-r="gu" aria-pressed="false">선택한 가게의 구·군</button></div>
         <ol class="rank" id="c100"></ol>
         <p class="hint" id="c100Hint">데이터를 불러오면 후보를 찾습니다.</p>
@@ -468,7 +475,7 @@ tr:hover td{background:#000080!important;color:#fff}
       </section>
     </div>
   </div>
-  <div class="statusbar" role="status"><span id="sbCount">대구 음식점 97,575곳 탐색 가능</span><span>EPSG:5174 READY</span><span id="sbSel">TARGET: -</span><span>4P</span></div>
+  <div class="statusbar" role="status"><span id="sbCount">대구 음식점 데이터 불러오는 중</span><span>EPSG:5174 READY</span><span id="sbSel">TARGET: -</span><span>4P</span></div>
   <footer class="team">
     <span class="team-name">데이터서비스 4조 - 4P</span>
     <span class="team-members">손효민 · 이재훈 · 이찬영 · 이건협</span>
@@ -478,7 +485,7 @@ tr:hover td{background:#000080!important;color:#fff}
 <script>
 (function(){
 const DAY=86400000, YEAR=365.25*DAY, SNAP=Date.UTC(2026,9,28);
-let REF=SNAP, REFLABEL='2026.10.28';
+let REF=SNAP, REFLABEL='2026.10.28', META=null, KINDS=['일반음식점','휴게음식점','제과점'];
 const $=id=>document.getElementById(id);
 let DATA=[], SRC={label:'',example:true}, selId=null, pending=null;
 
@@ -649,18 +656,20 @@ function detectFranchise(){
 }
 /* ---------- bundled Daegu data ---------- */
 async function loadBundled(){
-  $('result').innerHTML='<div class="empty">대구 일반음식점 97,575곳을 불러오는 중입니다…</div>';
+  $('result').innerHTML='<div class="empty">대구 음식점 데이터를 불러오는 중입니다…</div>';
   try{
-    const res=await fetch('daegu.json');if(!res.ok)throw new Error('HTTP '+res.status);
+    const res=await fetch('daegu.json?v=4',{cache:'no-cache'});if(!res.ok)throw new Error('HTTP '+res.status);
     const j=await res.json();const n=j.n.length,out=new Array(n);
     for(let i=0;i<n;i++){
       const gu=j.gus[j.g[i]],closed=j.e[i]>=0;
       out[i]={id:i+1,name:j.n[i]||'(이름 없음)',type:j.types[j.t[i]],gu,dong:j.dongs[j.d[i]],
         addr:'대구광역시 '+gu+' '+j.a[i],closed,start:j.s[i]*DAY,end:closed?j.e[i]*DAY:null,
-        x:j.x[i]||null,y:j.y[i]||null,warn:!!j.w[i]};
+        x:j.x[i]||null,y:j.y[i]||null,warn:!!j.w[i],kind:j.k?j.k[i]:0,unk:!!(j.u&&j.u[i]),cent:j.c?j.c[i]:0};
       out[i].menu=menuOf(out[i].name);out[i].key=(out[i].name+' '+out[i].addr+' '+(out[i].dong||'')+' '+out[i].type+' '+(out[i].menu||'')).toLowerCase();
     }
-    DATA=out;buildLabels();detectFranchise();REF=SNAP;REFLABEL='2026.10.28';SRC={label:j.src,bundled:true};
+    DATA=out;buildLabels();detectFranchise();META=j.meta||null;if(j.kinds)KINDS=j.kinds;
+    {const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(j.snap||'');REF=m?Date.UTC(+m[1],m[2]-1,+m[3]):SNAP;REFLABEL=m?`${m[1]}.${m[2]}.${m[3]}`:'2026.10.28';}
+    SRC={label:j.src,bundled:true};
     selId=pickDefault();renderSrc(out.filter(d=>d.x!=null).length);startReady();runSearch();render();
   }catch(e){
     $('result').innerHTML='<p class="err">기본 데이터를 불러오지 못했습니다. 페이지를 새로고침하거나 CSV·JSON 파일을 직접 올려 주세요.</p>';
@@ -678,7 +687,7 @@ function compute(){
   let sel=DATA.find(d=>d.id===selId);
   if(sel&&sel.closed){selId=pickDefault();sel=DATA.find(d=>d.id===selId);}
   if(!sel)return null;
-  const k=+$('k').value,mode=$('cmpMode').value,sameGu=$('sameGu').checked;
+  const k=+$('k').value,mode=$('cmpMode').value,sameGu=$('sameGu').checked,sameKind=$('sameKind').checked;
   const basis=mode==='menu'&&!sel.menu?'type':mode;
   if(sel.x==null)return {sel,err:'이 가게는 좌표 정보가 없어 주변 점포를 찾을 수 없습니다.'};
   const own=years(sel);if(!isFinite(own))return {sel,err:'이 가게는 폐업일자가 없어 영업 기간을 계산할 수 없습니다.'};
@@ -688,6 +697,7 @@ function compute(){
     if(basis==='type'&&d.type!==sel.type)continue;
     if(basis==='menu'&&d.menu!==sel.menu)continue;
     if(sameGu&&d.gu!==sel.gu)continue;
+    if(sameKind&&d.kind!==sel.kind)continue;
     const yr=(d.end-d.start)/YEAR;if(!(yr>=0))continue;
     cand.push({d,yr,dist:Math.hypot(d.x-sel.x,d.y-sel.y)});
   }
@@ -716,7 +726,7 @@ function render(){
   const box=$('result'),tbl=$('tbl');
   if(!R){box.innerHTML='<div class="empty">왼쪽에서 가게를 골라 주세요.</div>';tbl.innerHTML='';draw();return;}
   const s=R.sel;
-  const head=`<div><p class="store-name">${esc(s.name)}${isC100(s)?' <span class="chip c100" title="업력 30년 이상 · 프랜차이즈 아님 (추정)">백년가게 기준 충족</span>':''}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'}</p><div style="margin-top:6px">${mapLinks(s)}</div></div>`;
+  const head=`<div><p class="store-name">${esc(s.name)}${centChip(s)}${isC100(s)&&!s.cent?' <span class="chip c100" title="업력 30년 이상 · 프랜차이즈 아님. 데이터로 추정한 것이며 공식 인증이 아닙니다">백년가게 기준 충족 (추정)</span>':''}${kindChip(s)}${unkChip(s)}${s.fr?` <span class="chip fr">프랜차이즈 · ${esc(s.fr)}</span>`:''}</p><p class="store-meta">${esc(s.type)}${s.menu?` · 메뉴 추정 <b>${esc(s.menu)}</b>`:''} · ${esc(s.addr)} · ${s.closed?'<span class="chip closed">폐업</span>':'<span class="chip">영업 중</span>'}</p><div style="margin-top:6px">${mapLinks(s)}</div></div>`;
   if(R.err){box.innerHTML=`<h2><span class="en">BATTLE STATS</span> 생존 점수</h2>${head}<p class="err">${esc(R.err)}</p>`;tbl.innerHTML='';draw();return;}
   const [vt,vc]=verdict(R.ratio);const mx=Math.max(R.own,R.avg)*1.05||1;
   box.innerHTML=`<h2><span class="en">BATTLE STATS</span> 생존 점수</h2>
@@ -1222,13 +1232,13 @@ function setTurtleFavicon(){
 const RANK={list:null,job:0,scope:'all'};
 function rankCompute(){
   const job=++RANK.job;RANK.list=null;rankRender();
-  const k=+$('k').value,mode=$('cmpMode').value,sameGu=$('sameGu').checked,CELL=500;
+  const k=+$('k').value,mode=$('cmpMode').value,sameGu=$('sameGu').checked,sameKind=$('sameKind').checked,CELL=500;
   const groups=new Map();
-  const gk=(basis,d)=>basis==='all'?'*':basis==='type'?'t|'+d.type:'m|'+d.menu;
+  const gk=(basis,d)=>(sameKind?d.kind+'#':'')+(basis==='all'?'*':basis==='type'?'t|'+d.type:'m|'+d.menu);
   const add=(key,d,yr)=>{let g=groups.get(key);if(!g){g=new Map();groups.set(key,g);}const c=Math.floor(d.x/CELL)+','+Math.floor(d.y/CELL);let a=g.get(c);if(!a){a=[];g.set(c,a);}a.push([d,yr]);};
   for(const d of DATA){
     if(!d.closed||d.x==null||!d.end)continue;const yr=(d.end-d.start)/YEAR;if(!(yr>=0))continue;
-    if(mode==='all')add('*',d,yr);else{add('t|'+d.type,d,yr);if(mode==='menu'&&d.menu)add('m|'+d.menu,d,yr);}
+    const kp=sameKind?d.kind+'#':'';if(mode==='all')add(kp+'*',d,yr);else{add(kp+'t|'+d.type,d,yr);if(mode==='menu'&&d.menu)add(kp+'m|'+d.menu,d,yr);}
   }
   const open=DATA.filter(d=>!d.closed&&d.x!=null&&isFinite(years(d)));
   const out=[];let i=0;
@@ -1271,18 +1281,23 @@ function pctUpdate(){
 }
 /* ---------- 백년가게 후보: 업력 30년 이상 · 영업 중 · 프랜차이즈 아님 ---------- */
 const C100={scope:'all'};
+const CENTL={1:'백년가게 선정 (2022·2026)',2:'백년가게 선정 (2026 신규)',3:'백년가게 선정 (2022, 2026 명단엔 없음)'};
+const kindChip=d=>d.kind?` <span class="chip kind">${esc(KINDS[d.kind])}</span>`:'';
+const unkChip=d=>d.unk&&!d.closed?' <span class="chip unk" title="인허가는 영업 중이지만 조원 확인에서 실제 영업 여부를 확인하지 못했습니다">영업 미확인</span>':'';
+const centChip=d=>d.cent?` <span class="chip cent" title="중소벤처기업부 백년가게 명단과 상호·주소로 맞춘 결과입니다">★ ${CENTL[d.cent]}</span>`:'';
 const isC100=d=>!d.closed&&!d.fr&&years(d)>=30;
 function c100Render(){
   const ol=$('c100');if(!ol||!DATA.length)return;
   document.querySelectorAll('#c100Scope button').forEach(b=>{const on=b.dataset.r===C100.scope;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
   const sel=DATA.find(d=>d.id===selId);
-  let L=DATA.filter(isC100);const all=L.length;
+  let L=DATA.filter(d=>isC100(d)||(d.cent&&!d.closed));const all=L.length;
   if(C100.scope==='gu'&&sel)L=L.filter(d=>d.gu===sel.gu);
-  L.sort((a,b)=>years(b)-years(a));
+  L.sort((a,b)=>(!!b.cent-!!a.cent)||years(b)-years(a));
   ol.innerHTML=L.map((d,i)=>`<li><button type="button" class="rk${d.id===selId?' sel':''}" data-id="${d.id}">
-    <span class="rk-n">${i+1}</span><span class="rk-m"><b>${esc(d.name)}${d.warn?' <i class="rk-w" title="지위승계 이력: 사장·상호가 바뀌었을 수 있음">승계</i>':''}</b><small>${esc(d.menu||d.type)} · ${esc(d.gu)} ${esc(d.dong||'')} · ${fd(d.start)} 개업</small></span>
+    <span class="rk-n">${i+1}</span><span class="rk-m"><b>${d.cent?`<span class="star" title="${CENTL[d.cent]}">★</span>`:''}${esc(d.name)}${d.warn?' <i class="rk-w" title="지위승계 이력: 사장·상호가 바뀌었을 수 있음">승계</i>':''}</b><small>${esc(d.menu||d.type)} · ${esc(d.gu)} ${esc(d.dong||'')} · ${fd(d.start)} 개업</small></span>
     <span class="rk-v c100-y">${years(d).toFixed(1)}<small>년</small></span></button></li>`).join('')||'<li class="hint" style="padding:10px">조건에 맞는 가게가 없습니다.</li>';
-  $('c100Hint').textContent=`${C100.scope==='gu'&&sel?sel.gu+' ':'대구 '}${L.length.toLocaleString()}곳${C100.scope==='gu'?` (대구 전체 ${all.toLocaleString()}곳)`:''} · 업력은 인허가일부터 데이터 기준일(${REFLABEL})까지입니다. 사업자등록 기준 업력과 다를 수 있고, 대기업 자회사 여부는 확인하지 못했습니다. '승계'는 사장·상호가 바뀌었을 수 있는 가게입니다.`;
+  const nc=L.filter(d=>d.cent).length,cm=META&&META.c100;
+  $('c100Hint').textContent=`${C100.scope==='gu'&&sel?sel.gu+' ':'대구 '}${L.length.toLocaleString()}곳${C100.scope==='gu'?` (대구 전체 ${all.toLocaleString()}곳)`:''} · ★ 실제 선정 ${nc}곳${cm?` (대구 백년가게 명단 ${cm.list}곳 중 사이트 데이터와 연결된 ${cm.matched}곳, 음식점이 아니거나 상호·주소가 달라 못 찾은 곳 ${cm.list-cm.matched}곳)`:''} · 후보는 공식 인증이 아닙니다. 업력은 인허가일부터 데이터 기준일(${REFLABEL})까지입니다. 사업자등록 기준 업력과 다를 수 있고, 대기업 자회사 여부는 확인하지 못했습니다. '승계'는 사장·상호가 바뀌었을 수 있는 가게입니다.`;
 }
 function rankRender(){
   c100Render();
@@ -1297,7 +1312,7 @@ function rankRender(){
     <span class="rk-n">${i+1}</span><span class="rk-m"><b>${esc(r.d.name)}${r.d.warn?' <i class="rk-w" title="지위승계 이력: 상호·업종이 바뀌었을 수 있음">승계</i>':''}</b><small>${esc(r.d.menu||r.d.type)} · ${esc(r.d.gu)} ${esc(r.d.dong||'')} · ${r.own.toFixed(1)}년</small></span>
     <span class="rk-v">${r.ratio.toFixed(2)}<small>배</small></span></button></li>`).join('')||'<li class="hint" style="padding:10px">조건에 맞는 가게가 없습니다.</li>';
   const mode=$('cmpMode').value;
-  $('rankHint').textContent=`${RANK.scope==='gu'&&sel?sel.gu+' ':'대구 '}영업 중인 가게 ${L.length.toLocaleString()}곳 중 상위 ${top.length}곳 · 기준: ${mode==='menu'?'같은 메뉴':mode==='type'?'같은 업태':'모든 음식점'}, k=${$('k').value}${$('sameGu').checked?', 같은 구·군':''}. 결과 카드와 같은 방식으로 계산합니다. 비교할 폐업 점포가 k곳에 못 미치거나 주변 평균이 1년 미만(행사용 임시 영업이 몰린 곳)인 가게, 메뉴를 알 수 없는 업태 '기타' 가게는 뺐습니다. '승계'는 사장이나 상호가 바뀌었을 수 있는 가게입니다.`;
+  $('rankHint').textContent=`${RANK.scope==='gu'&&sel?sel.gu+' ':'대구 '}영업 중인 가게 ${L.length.toLocaleString()}곳 중 상위 ${top.length}곳 · 기준: ${mode==='menu'?'같은 메뉴':mode==='type'?'같은 업태':'모든 음식점'}, k=${$('k').value}${$('sameGu').checked?', 같은 구·군':''}${$('sameKind').checked?', 같은 업종':''}. 결과 카드와 같은 방식으로 계산합니다. 비교할 폐업 점포가 k곳에 못 미치거나 주변 평균이 1년 미만(행사용 임시 영업이 몰린 곳)인 가게, 메뉴를 알 수 없는 업태 '기타' 가게는 뺐습니다. '승계'는 사장이나 상호가 바뀌었을 수 있는 가게입니다.`;
 }
 
 /* ---------- search ---------- */
@@ -1313,7 +1328,7 @@ function runSearch(){
     <div style="min-width:0"><b><span class="badge-closed">폐업</span>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')} · ${fd(d.end)} 폐업</small></div>
     <div class="r">${fy(years(d))}</div></div>`
     :`<div class="item${d.id===selId?' sel':''}" role="option" tabindex="0" data-id="${d.id}" aria-selected="${d.id===selId}">
-    <div style="min-width:0"><b>${esc(d.name)}</b><small>${esc(d.type)} · ${esc(d.gu||'')}${d.fr?' · 프랜차이즈':''}</small></div>
+    <div style="min-width:0"><b>${d.cent?'<span class="star" title="백년가게 선정">★</span>':''}${esc(d.name)}</b><small>${d.kind?esc(KINDS[d.kind])+' · ':''}${esc(d.type)} · ${esc(d.gu||'')}${d.fr?' · 프랜차이즈':''}${d.unk?' · 영업 미확인':''}</small></div>
     <div class="r">${fy(years(d))}</div></div>`).join('')||'<div class="empty" style="padding:20px">검색 결과가 없습니다.</div>';
   $('listHint').textContent=`영업 중인 가게 ${total.toLocaleString()}곳`+(nClosed?` · 폐업한 가게 ${nClosed.toLocaleString()}곳`:'')+(total+nClosed>60?' 중 60곳만 보여줍니다. 검색어를 더 좁혀 보세요.':'');
 }
@@ -1325,7 +1340,7 @@ let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(runSe
 /* ---------- controls ---------- */
 let rankT;const rankSoon=()=>{clearTimeout(rankT);rankT=setTimeout(rankCompute,350);};
 $('k').addEventListener('input',()=>{$('kNum').textContent=$('k').value;render();rankSoon();});
-$('cmpMode').addEventListener('change',rankSoon);$('sameGu').addEventListener('change',rankSoon);
+$('cmpMode').addEventListener('change',rankSoon);$('sameGu').addEventListener('change',rankSoon);$('sameKind').addEventListener('change',rankSoon);$('sameKind').addEventListener('change',render);
 document.querySelectorAll('#rankScope button').forEach(b=>b.addEventListener('click',()=>{RANK.scope=b.dataset.r;rankRender();}));
 $('rank').addEventListener('click',e=>{const b=e.target.closest('.rk');if(!b)return;selId=+b.dataset.id;runSearch();render();});
 $('cmpMode').addEventListener('change',render);$('showOpen').addEventListener('change',()=>req());$('showFr').addEventListener('change',()=>req());document.querySelectorAll('#mapType button').forEach(b=>b.addEventListener('click',()=>setMapType(b.dataset.t)));$('showClosed').addEventListener('change',()=>req());$('sameGu').addEventListener('change',render);
@@ -1339,9 +1354,19 @@ $('loadBtn').addEventListener('click',load);
 $('cancelBtn').addEventListener('click',()=>{$('mapPanel').hidden=true;pending=null;});
 function showErr(m){const e=$('err');e.textContent=m;e.hidden=false;$('progWrap').hidden=true;}
 function hideErr(){$('err').hidden=true;}
+function srcTable(){
+  const st=META&&META.stat;if(!st)return '';const f=v=>(v||0).toLocaleString();
+  const row=(nm,o,note)=>`<div class="srcr"><b>${nm}</b> <span class="mono">${f(o.added)}</span>곳 <span class="srcn">영업 ${f(o.open)} · 폐업 ${f(o.closed)}</span><small>빠진 곳: ${note}</small></div>`;
+  const g=st['일반음식점'],c=st['휴게음식점'],b=st['제과점'];
+  return `<div class="srcw">
+  ${g?row('일반음식점',g,`실제 폐업 추정 ${f(g.gone)} (폐업일 모름) · 출장·이동조리·푸드트럭 ${f(g.excl_type)}`):''}
+  ${c?row('휴게음식점 <em>추가</em>',c,`일반음식점과 겹침 ${f(c.dup)} · 편의점·백화점 ${f(c.excl_type)}`):''}
+  ${b?row('제과점 <em>추가</em>',b,`앞 두 업종과 겹침 ${f(b.dup)}`):''}
+  <p class="hint">겹치는 가게는 일반음식점 쪽 기록을 그대로 두고 새로 넣지 않았습니다. 일반음식점의 영업 여부는 조원이 상가정보·카카오맵과 대조한 최종판정을 반영했고, 확인하지 못한 ${f(g&&g.unk)}곳은 '영업 미확인'으로 표시합니다.</p></div>`;
+}
 function renderSrc(withXY){
   $('srcLine').innerHTML=SRC.bundled
-    ?`<span class="chip">기본 데이터</span><span>${esc(SRC.label)} · 2026.10.28 수집 · 대구 ${DATA.length.toLocaleString()}곳 (영업 ${DATA.filter(d=>!d.closed).length.toLocaleString()} · 폐업 ${DATA.filter(d=>d.closed).length.toLocaleString()})</span>`
+    ?`<span class="chip">기본 데이터</span><span>${esc(SRC.label)} · ${REFLABEL} 기준 · 대구 ${DATA.length.toLocaleString()}곳 (영업 ${DATA.filter(d=>!d.closed).length.toLocaleString()} · 폐업 ${DATA.filter(d=>d.closed).length.toLocaleString()})</span>${srcTable()}`
     :`<span class="chip">불러옴</span><span>${esc(SRC.label)} · 대구 ${DATA.length.toLocaleString()}곳 (좌표 있음 ${withXY.toLocaleString()})</span>`;
 }
 window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(draw,100);});
