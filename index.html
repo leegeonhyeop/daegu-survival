@@ -1304,9 +1304,7 @@ function rankRender(){
 function runSearch(){
   const q=$('q').value.trim().toLowerCase();const list=$('list');
   let rows=DATA.filter(d=>!d.closed),nClosed=0;
-  if(q){const t=q.split(/\s+/).filter(Boolean);const m=DATA.filter(d=>t.every(w=>d.key.includes(w)));
-    const o=m.filter(d=>!d.closed),c=m.filter(d=>d.closed);nClosed=c.length;
-    const oN=Math.min(o.length,60-Math.min(c.length,15));rows=o.slice(0,oN).concat(c.slice(0,60-oN));rows.total=o.length;}
+  if(q){const t=q.split(/\s+/).filter(Boolean);rows=rows.filter(d=>t.every(w=>d.key.includes(w)));}
   const total=rows.total??rows.length;rows=rows.slice(0,60);
   const sel=DATA.find(d=>d.id===selId);
   if(sel&&!rows.includes(sel)&&!q)rows=[sel,...rows.slice(0,59)];
