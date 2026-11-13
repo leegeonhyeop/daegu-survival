@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="대구 일반음식점이 주변 같은 업태 폐업 점포보다 얼마나 오래 버텼는지 생존배수로 보여줍니다.">
 <title>대구 음식점 생존배수 v1.0</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=Space+Mono:wght@400;700&family=Public+Sans:wght@400;500;700&display=swap">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
@@ -17,8 +17,8 @@ html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
   --bg:#F3F5F8; --surface:#FFFFFF; --ink:#16202E; --muted:#5B6678; --line:#DCE1E9;
   --accent:#1F62A8; --accent-soft:#E3ECF7; --near:#C47A12; --near-soft:#F8ECD8;
   --closed:#A9B0BC; --open:#5E8FC4; --mapbg:#EEF0EC; --maplabel:#3D4654; --good:#1E7F4F; --warn:#B26A00; --bad:#B23A3A;
-  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --f-body:"Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  --f-mono:"GalmuriMono11","Galmuri11",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0F151E; --surface:#17202C; --ink:#E6EBF2; --muted:#9AA6B8; --line:#2A3544;
@@ -195,7 +195,7 @@ body.home-on{overflow:hidden}
 body.home-typing .home-in{padding-top:6vh}
 .home-logo{display:flex;align-items:center;justify-content:center;gap:14px}
 .home-logo canvas{width:auto;height:72px}
-.start.home h2{all:unset;font-family:var(--f-pixel,var(--f-mono));font-size:clamp(40px,9vw,64px);font-weight:800;letter-spacing:.02em;color:#000080;text-shadow:3px 3px 0 #9EC5E8}
+.start.home h2{all:unset;font-family:var(--f-head);font-size:clamp(40px,9vw,64px);font-weight:800;letter-spacing:.02em;color:#000080;text-shadow:3px 3px 0 #9EC5E8}
 .home-sub{margin:0;text-align:center;color:var(--muted);font-size:14px}
 .start.home .start-box{background:#fff;border:2px solid #000;box-shadow:4px 4px 0 #000;padding:4px}
 .start.home .start-box input{border:0!important;box-shadow:none!important;font-size:17px;padding:12px 12px;outline:none}
@@ -261,16 +261,16 @@ tr:hover td{background:var(--accent-soft)}
 .srcw{flex:0 0 100%;min-width:0;max-width:100%}
 .src{min-width:0}.srcr{border-top:1px solid var(--line);padding:6px 0;font-size:12.5px}.srcr small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}.srcn{color:var(--muted);font-size:12px}.srcr em{font-style:normal;font-size:10px;background:#DCFCE7;color:#166534;padding:0 4px;border-radius:3px;margin-left:2px}
 /* ================= Retro Arcade Survival HUD (retrowebdesign_1110 · webdesign_1110) ================= */
-@font-face{font-family:"DungGeunMo";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff") format("woff");font-display:swap}
+
 :root,:root[data-theme="dark"]{
   --bg:#EBE9E9; --surface:#F4F3F3; --ink:#191C1C; --muted:#3F4948; --line:#808080;
   --accent:#008080; --accent-soft:#CCE8E7; --near:#527C96; --near-soft:#DCE7EE;
   --closed:#9AA0A0; --open:#3E8E7E; --mapbg:#EEF0EC; --maplabel:#2D3131; --good:#0E8A62; --warn:#B26A00; --bad:#BA1A1A;
   --chassis:#C0C0C0; --hi:#FFFFFF; --lo:#808080; --dk:#000000; --term:#0F2027; --term2:#162A32; --emerald:#00FFCC; --gold:#F59E0B; --coral:#E11D48;
-  --f-body:"Public Sans","IBM Plex Sans KR",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --f-mono:"Space Mono","IBM Plex Mono",ui-monospace,monospace;
-  --f-head:"Space Grotesk","DungGeunMo","IBM Plex Sans KR",sans-serif;
-  --f-pix:"DungGeunMo","Space Mono","IBM Plex Sans KR",monospace;
+  --f-body:"Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  --f-mono:"GalmuriMono11","Galmuri11",ui-monospace,monospace;
+  --f-head:"Galmuri14","Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  --f-pix:"Galmuri14","Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
   color-scheme:light}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#EBE9E9; --surface:#F4F3F3; --ink:#191C1C; --muted:#3F4948; --line:#808080;
@@ -368,6 +368,14 @@ tr:hover td{background:#000080!important;color:#fff}
 @media (max-width:560px){.score-left{min-width:0;flex-wrap:wrap}.score-left>div{min-width:0}.pctbar{min-width:0;flex-basis:100%}.pb-row,.pb-ax{grid-template-columns:40px 1fr 64px}}
 @media (max-width:767px){.statusbar span:nth-child(2),.statusbar span:nth-child(4){display:none}.titlebar h1{font-size:14px}.tb-tag{display:none}}
 @media (prefers-reduced-motion:reduce){button:active{transform:none}}
+
+/* ---------- 글꼴 통일: 갈무리(픽셀 한글) ---------- */
+:root{--f-body:"Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif!important;--f-head:"Galmuri14","Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif!important;--f-mono:"GalmuriMono11","Galmuri11",ui-monospace,monospace!important;--f-pix:"Galmuri14","Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif!important;--f-pixel:"Galmuri14","Galmuri11","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif!important}
+html,body{font-family:var(--f-body);-webkit-font-smoothing:none;font-synthesis:none;letter-spacing:0}
+input,select,textarea,button,table,.kpop,.pop{font-family:inherit}
+h1,h2,h3,.store-name,.big,.verdict,.sword-grade,.start.home h2{font-family:var(--f-head)!important;letter-spacing:0!important}
+.mono,.calc,.knum,.rk-v,.rk-n,.r,code,.statusbar,.sys{font-family:var(--f-mono)!important}
+b,strong,th{font-weight:700}
 </style>
 
 </head>
@@ -871,7 +879,7 @@ function paint(){
   const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
   c.fillStyle=cssv('--mapbg');c.fillRect(0,0,W,H);
   const R=LAST;
-  if(!R||!V.ok){c.fillStyle=cssv('--muted');c.font='13px sans-serif';c.textAlign='center';c.fillText('좌표가 있는 가게를 고르면 지도가 표시됩니다',W/2,H/2);placePop();return;}
+  if(!R||!V.ok){c.fillStyle=cssv('--muted');c.font='13px "Galmuri11",sans-serif';c.textAlign='center';c.fillText('좌표가 있는 가게를 고르면 지도가 표시됩니다',W/2,H/2);placePop();return;}
   drawTiles(c,W,H,dpr);
   const s=R.sel,near=new Map((R.nb||[]).map((n,i)=>[n.d.id,i+1]));
   const hx=W/2/V.sc+20,hy=H/2/V.sc+20;
@@ -903,7 +911,7 @@ function paint(){
   c.globalAlpha=1;
   // place labels
   const halo=cssv('--mapbg'),lab=cssv('--maplabel');
-  const text=(t,x,y,size,weight)=>{c.font=`${weight} ${size}px "IBM Plex Sans KR",sans-serif`;c.textAlign='center';c.textBaseline='middle';
+  const text=(t,x,y,size,weight)=>{c.font=`${weight} ${size}px "Galmuri11","Apple SD Gothic Neo","Malgun Gothic",sans-serif`;c.textAlign='center';c.textBaseline='middle';
     c.lineWidth=4;c.strokeStyle=halo;c.lineJoin='round';c.strokeText(t,x,y);c.fillStyle=lab;c.fillText(t,x,y);};
   if(LABELS&&!TILE.ok){
     if(V.sc<.06)for(const l of LABELS.gu){const x=sx(l.x),y=sy(l.y);if(x>-50&&x<W+50&&y>-20&&y<H+20)text(l.t,x,y,15,700);}
@@ -923,7 +931,7 @@ function paint(){
   nbs.forEach(n=>{
     const x=sx(n.d.x),y=sy(n.d.y),i=near.get(n.d.id);
     if(numbered){c.fillStyle=nr;c.strokeStyle=sf;c.lineWidth=2;c.beginPath();c.arc(x,y,9,0,7);c.fill();c.stroke();
-      c.fillStyle=sf;c.font='600 10px "IBM Plex Mono",monospace';c.textAlign='center';c.textBaseline='middle';c.fillText(i,x,y+.5);}
+      c.fillStyle=sf;c.font='600 10px "GalmuriMono11","Galmuri11",monospace';c.textAlign='center';c.textBaseline='middle';c.fillText(i,x,y+.5);}
     else{c.fillStyle=nr;c.beginPath();c.arc(x,y,4,0,7);c.fill();}
   });
   // popup highlight
@@ -934,7 +942,7 @@ function paint(){
    c.fillStyle=acc;c.strokeStyle=sf;c.lineWidth=2;c.beginPath();
    c.moveTo(x,y);c.bezierCurveTo(x-4,y-9,x-13,y-15,x-13,y-25);c.arc(x,y-25,13,Math.PI,0);c.bezierCurveTo(x+13,y-15,x+4,y-9,x,y);c.closePath();c.fill();c.stroke();
    c.fillStyle=sf;c.beginPath();c.arc(x,y-25,5,0,7);c.fill();
-   if(V.sc>.04){c.font='700 12.5px "IBM Plex Sans KR",sans-serif';c.textAlign='center';c.textBaseline='bottom';
+   if(V.sc>.04){c.font='700 12.5px "Galmuri11","Apple SD Gothic Neo","Malgun Gothic",sans-serif';c.textAlign='center';c.textBaseline='bottom';
      const t=s.name.length>14?s.name.slice(0,13)+'…':s.name,w=c.measureText(t).width+14;
      c.fillStyle=acc;c.beginPath();c.roundRect?c.roundRect(x-w/2,y-64,w,22,11):c.rect(x-w/2,y-64,w,22);c.fill();
      c.fillStyle=sf;c.fillText(t,x,y-46.5);}
@@ -944,7 +952,7 @@ function paint(){
   const bx=12,by=H-14,bw=len*V.sc;
   c.strokeStyle=halo;c.lineWidth=5;c.beginPath();c.moveTo(bx,by-5);c.lineTo(bx,by);c.lineTo(bx+bw,by);c.lineTo(bx+bw,by-5);c.stroke();
   c.strokeStyle=mu;c.lineWidth=1.5;c.stroke();
-  c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='left';c.textBaseline='alphabetic';c.lineWidth=3;c.strokeStyle=halo;
+  c.font='600 11px "GalmuriMono11","Galmuri11",monospace';c.textAlign='left';c.textBaseline='alphabetic';c.lineWidth=3;c.strokeStyle=halo;
   const lt=len>=1000?len/1000+'km':len+'m';c.strokeText(lt,bx+bw+6,by+1);c.fillStyle=mu;c.fillText(lt,bx+bw+6,by+1);
   placePop();
 }
