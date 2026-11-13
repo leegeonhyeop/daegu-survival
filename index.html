@@ -78,6 +78,9 @@ button:disabled{opacity:.5;cursor:default}
 
 .score{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
 @media (max-width:560px){.score{grid-template-columns:1fr;gap:12px}}
+.score>*{min-width:0}
+@container (max-width:720px){.score{grid-template-columns:1fr;gap:12px}}
+#result{container-type:inline-size}
 .big{font-family:var(--f-mono);font-weight:600;font-size:64px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .big small{font-size:22px;margin-left:4px;font-family:var(--f-body)}
 .verdict{display:inline-block;font-weight:600;font-size:13px;padding:3px 10px;border-radius:99px;margin-top:8px}
