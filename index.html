@@ -79,6 +79,7 @@ button:disabled{opacity:.5;cursor:default}
 .score{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
 @media (max-width:560px){.score{grid-template-columns:1fr;gap:12px}}
 .score>*{min-width:0}
+.score{grid-template-columns:fit-content(60%) minmax(260px,1fr)}
 @container (max-width:720px){.score{grid-template-columns:1fr;gap:12px}}
 #result{container-type:inline-size}
 .big{font-family:var(--f-mono);font-weight:600;font-size:64px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
